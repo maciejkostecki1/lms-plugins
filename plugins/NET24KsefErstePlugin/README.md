@@ -54,3 +54,11 @@ Lista ma limit 200 dokumentów i obejmuje PLN, dodatnie kwoty oraz rachunki spe�
 ## Aktualizacja i wyłączenie
 
 Przed aktualizacją zachowaj kopię katalogu i konfiguracji. Po podmianie kodu odśwież autoloader. Wyłączenie wtyczki w LMS usuwa jej stronę z użycia; nie cofa plików wcześniej zaimportowanych do banku. Wtyczka nie ma własnego schematu bazy ani zadań cron.
+
+## Wsparcie rozwoju
+
+Jeśli wtyczki są dla Ciebie przydatne, możesz dobrowolnie wesprzeć ich dalszy rozwój:
+
+[☕ Postaw kawę — wesprzyj rozwój wtyczek LMS](https://buycoffee.to/kostek_mostek)
+
+Wsparcie jest dobrowolne i nie stanowi opłaty za instalację ani gwarancji pomocy technicznej.
