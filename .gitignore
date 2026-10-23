@@ -1,0 +1,21 @@
+# Lokalna konfiguracja i dane dostępowe
+.env
+.env.*
+!.env.example
+lms.ini
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# Dane wykonania i kopie zapasowe
+*.log
+*.bak
+*.backup
+*.zip
+*.tar.gz
+/backups/
+/exports/
+/tmp/
+.DS_Store
+Thumbs.db
