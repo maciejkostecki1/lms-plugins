@@ -27,3 +27,11 @@ Przy równoległej pełnej wersji kolektory współdzielą blokadę odczytu, aby
 Alerty wymagają odbiornika trapów i bezpiecznego eksportu do `/var/lib/lms-huawei-alerts/alerts.json`, czytelnego dla serwera WWW. Przykład formatu: `config/alerts.example.json`. Nie zapisuj community ani surowych nagłówków trapów w eksporcie.
 
 Archiwum nie zawiera bazy, prawdziwych community, danych klientów ani konfiguracji tego serwera. Dostęp do działającego demo może pokazywać rzeczywiste dane lokalnej instalacji. Szczegóły sprawdzeń: `DEMO-VERIFICATION.md`.
+
+## Wsparcie rozwoju
+
+Jeśli wtyczki są dla Ciebie przydatne, możesz dobrowolnie wesprzeć ich dalszy rozwój:
+
+[☕ Postaw kawę — wesprzyj rozwój wtyczek LMS](https://buycoffee.to/kostek_mostek)
+
+Wsparcie jest dobrowolne i nie stanowi opłaty za instalację ani gwarancji pomocy technicznej.
