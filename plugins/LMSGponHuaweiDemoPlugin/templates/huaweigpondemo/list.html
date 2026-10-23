@@ -1,0 +1,560 @@
+{extends file="layout.html"}
+{block name="module_content"}
+<div class="hg-ui hg-ui-list">
+<h2>Huawei GPON — lista ONT</h2>
+<form class="hg-toolbar" method="get" action="" style="padding:10px;background:#f1f1ee;margin-bottom:10px;display:flex;flex-wrap:wrap;gap:10px;align-items:end">
+<input type="hidden" name="m" value="huaweigpondemolist">
+<label class="hg-olt-field">Urządzenie OLT<select data-hg-olt="1" name="olt" onchange="this.form.slot.value='';this.form.port.value='';this.form.submit()"><option value="">Wszystkie OLT</option>{foreach $huawei_olts as $host}<option value="{$host|escape}"{if $huawei_olt == $host} selected{/if}>{$hd_olt_names[$host]|default:$host|escape}</option>{/foreach}</select></label>
+<label>Slot GPON<select name="slot" onchange="this.form.port.value='';this.form.submit()"><option value="">Wszystkie sloty</option>{foreach $huawei_slots as $s}<option value="{$s|escape}"{if $huawei_slot === (string)$s} selected{/if}>{$s|escape}</option>{/foreach}</select></label>
+<label>Port GPON<select name="port" onchange="this.form.submit()"><option value="">Wszystkie porty</option>{foreach $huawei_ports as $p}<option value="{$p|escape}"{if $huawei_port === (string)$p} selected{/if}>{$p|escape}</option>{/foreach}</select></label>
+<label>SN, opis lub ONT ID<input type="text" name="q" value="{$huawei_query|escape}" size="25" maxlength="120"></label>
+<button type="submit">Filtruj</button><a href="?m=huaweigpondemolist">Wyczyść</a>
+</form>
+<div style="margin:8px 0">ONT: <b>{$huawei_total}</b> | Wyświetlane: {$huawei_page_start}–{$huawei_page_end} | Strona {$huawei_page} z {$huawei_pages}
+{if $huawei_page > 1}<a href="{$huawei_base_url|escape}&amp;page={$huawei_page-1}">« Poprzednia</a>{/if}
+{if $huawei_page < $huawei_pages}<a href="{$huawei_base_url|escape}&amp;page={$huawei_page+1}">Następna »</a>{/if}</div>
+
+{* HG-LIST-COMPACT-V1 *}
+
+<style>
+/* HG-LIST-ZEBRA-V1 */
+
+#hg-list-wrap {
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+#hg-list-table {
+    width: 1065px !important;
+    max-width: none !important;
+    table-layout: fixed !important;
+    border-collapse: collapse;
+}
+
+#hg-list-table th,
+#hg-list-table td {
+    box-sizing: border-box;
+    padding: 6px 7px !important;
+    vertical-align: middle;
+}
+
+#hg-list-table th {
+    font-weight: 600;
+    white-space: nowrap;
+    text-align: left;
+}
+
+#hg-list-table td {
+    line-height: 1.4;
+}
+
+/* Szerokości kolumn */
+#hg-list-table th:nth-child(1),
+#hg-list-table td:nth-child(1) { width: 110px; }
+
+#hg-list-table th:nth-child(2),
+#hg-list-table td:nth-child(2) { width: 120px; }
+
+#hg-list-table th:nth-child(3),
+#hg-list-table td:nth-child(3) { width: 145px; }
+
+#hg-list-table th:nth-child(4),
+#hg-list-table td:nth-child(4) { width: 190px; }
+
+#hg-list-table th:nth-child(5),
+#hg-list-table td:nth-child(5) { width: 90px; }
+
+#hg-list-table th:nth-child(6),
+#hg-list-table td:nth-child(6) { width: 80px; }
+
+#hg-list-table th:nth-child(7),
+#hg-list-table td:nth-child(7) { width: 80px; }
+
+#hg-list-table th:nth-child(8),
+#hg-list-table td:nth-child(8) { width: 90px; }
+
+#hg-list-table th:nth-child(9),
+#hg-list-table td:nth-child(9) { width: 160px; }
+
+/* Wyrównanie liczb */
+#hg-list-table th:nth-child(6),
+#hg-list-table th:nth-child(7),
+#hg-list-table th:nth-child(8),
+#hg-list-table td:nth-child(6),
+#hg-list-table td:nth-child(7),
+#hg-list-table td:nth-child(8) {
+    text-align: right !important;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Zebra rows */
+#hg-list-table tbody tr:nth-child(odd) {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+#hg-list-table tbody tr:nth-child(even) {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+#hg-list-table tbody tr:hover {
+    background: rgba(80,110,160,.10) !important;
+}
+
+/* Poszczególne kolumny */
+#hg-list-table .hg-sn {
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+#hg-list-table .hg-description {
+    overflow: hidden;
+}
+
+#hg-list-table .hg-description-text {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+#hg-list-table .hg-gpon {
+    white-space: nowrap;
+}
+
+#hg-list-table .hg-small {
+    font-size: 11px;
+    color: #777;
+}
+
+#hg-list-table .hg-number {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+#hg-list-table .hg-status-online {
+    color: #187b32;
+    font-weight: bold;
+}
+
+#hg-list-table .hg-status-offline {
+    color: #b42318;
+    font-weight: bold;
+}
+
+#hg-list-table .hg-status-unknown {
+    color: #777;
+}
+</style>
+
+
+<style>
+/* HG-LIST-REFRESH-FIX-V2 */
+
+#hg-list-table {
+    width: 100% !important;
+    min-width: 1110px !important;
+    table-layout: fixed !important;
+}
+
+/* Przyciski w tabeli */
+#hg-list-table button {
+    box-sizing: border-box;
+    margin: 0 !important;
+    vertical-align: middle;
+}
+
+/* Ostatnia kolumna, jeżeli zawiera przycisk */
+#hg-list-table td:last-child:has(button) {
+    text-align: center !important;
+    padding: 4px !important;
+}
+</style>
+
+
+<style>
+/* HG-REFRESH-ALIGN-V3 */
+
+/* Poszerzenie tabeli o 30 px */
+#hg-list-table {
+    width: 1095px !important;
+}
+
+/* Ostatnia kolumna: data i przycisk */
+#hg-list-table th:nth-child(9),
+#hg-list-table td:nth-child(9) {
+    width: 190px !important;
+    white-space: nowrap;
+    text-align: left !important;
+}
+
+/* Data */
+#hg-list-table .hg-refresh-time {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+/* Przycisk */
+#hg-list-table .hg-refresh-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0 !important;
+    margin: 0 0 0 5px !important;
+    font-size: 17px;
+    line-height: 1;
+    vertical-align: middle;
+}
+</style>
+
+<div id="hg-list-wrap">
+<div class="hg-ui-scroll"><table id="hg-list-table" class="hg-ui-table lmsbox">
+
+<thead>
+<tr>
+    <th>OLT</th>
+    <th>GPON / ONT</th>
+    <th>Numer seryjny</th>
+    <th>Opis</th>
+    <th>Status</th>
+    <th>ONT RX</th>
+    <th>OLT RX</th>
+    <th>Odległość</th>
+    <th>Odczyt</th>
+</tr>
+</thead>
+
+<tbody>
+{foreach $huawei_rows as $r}
+<tr>
+
+<td style="white-space:nowrap">
+    {$r.olt_host|escape}
+</td>
+
+<td class="hg-gpon">
+    <span>
+        {$r.gpon_port|escape}
+    </span>
+    <div class="hg-small">
+        ONT ID: {$r.ont_id|escape}
+    </div>
+</td>
+
+<td class="hg-sn">
+    <span>
+        {$r.serial_hex|escape}
+    </span>
+</td>
+
+<td class="hg-description">
+    <span class="hg-description-text"
+          title="{$r.description|escape}">
+        {$r.description|default:'—'|escape}
+    </span>
+</td>
+
+<td class="hg-refresh-state">
+    {if $r.online_state == 1}
+        <span class="hg-status-online">● Online</span>
+    {elseif $r.online_state == 2}
+        <span class="hg-status-offline">● Offline</span>
+    {else}
+        <span class="hg-status-unknown">● Nieznany</span>
+    {/if}
+</td>
+
+<td class="hg-number hg-refresh-ont-rx">
+    {$r.rx_dbm_display|escape}
+</td>
+
+<td class="hg-number hg-refresh-olt-rx">
+    {$r.olt_rx_dbm_display|escape}
+</td>
+
+<td class="hg-number hg-refresh-distance">
+    {if $r.distance_m !== null && $r.distance_m !== ''}
+        {$r.distance_m|escape} m
+    {else}
+        —
+    {/if}
+</td>
+
+<td style="white-space:nowrap">
+    <span class="hg-refresh-time">
+        {if $r.sampled_at}
+            {$r.sampled_at|substr:0:19|escape}
+        {else}
+            —
+        {/if}
+    </span>
+    <button type="button"
+            class="hg-refresh-button"
+            data-ont-id="{$r.id|escape}"
+            data-token="{$huawei_refresh_csrf|escape}"
+            title="Odczytaj ONT z Huawei i zapisz w bazie">
+        &#8635;
+    </button>
+</td>
+
+</tr>
+{foreachelse}
+<tr>
+    <td colspan="9" style="text-align:center;padding:20px">
+        Brak ONT dla wybranych filtrów
+    </td>
+</tr>
+{/foreach}
+</tbody>
+
+</table></div>
+</div>
+
+
+<style>
+.hg-refresh-button {
+    margin-left: 7px;
+    padding: 2px 8px;
+    cursor: pointer;
+    border: 1px solid #aaa;
+    border-radius: 4px;
+    background: #f6f6f6;
+    font-size: 18px;
+    line-height: 20px;
+    vertical-align: middle;
+}
+.hg-refresh-button:hover {
+    background: #e5edf8;
+}
+.hg-refresh-button:disabled {
+    opacity: .45;
+    cursor: wait;
+}
+</style>
+
+{literal}
+<script>
+(function () {
+    'use strict';
+
+    document.addEventListener('click', async function (event) {
+        const button = event.target.closest('.hg-refresh-button');
+        if (!button || button.disabled) return;
+
+        const row = button.closest('tr');
+        const original = button.textContent;
+
+        button.disabled = true;
+        button.textContent = '…';
+        button.title = 'Trwa odczyt SNMP';
+
+        try {
+            const body = new URLSearchParams();
+            body.set('id', button.dataset.ontId);
+            body.set('csrf', button.dataset.token);
+
+            const response = await fetch(
+                '?m=huaweigpondemolist&ajax=refresh',
+                {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'Content-Type':
+                            'application/x-www-form-urlencoded; charset=UTF-8'
+                    },
+                    body: body.toString()
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok || !data.ok) {
+                throw new Error(data.error || 'Błąd odczytu.');
+            }
+
+            const state = row.querySelector('.hg-refresh-state');
+            const ontRx = row.querySelector('.hg-refresh-ont-rx');
+            const oltRx = row.querySelector('.hg-refresh-olt-rx');
+            const distance = row.querySelector('.hg-refresh-distance');
+            const time = row.querySelector('.hg-refresh-time');
+
+            if (state) {
+                state.textContent =
+                    Number(data.state) === 1 ? '● Online' :
+                    Number(data.state) === 2 ? '● Offline' :
+                    '● Nieznany';
+
+                state.style.color =
+                    Number(data.state) === 1 ? '#187b32' :
+                    Number(data.state) === 2 ? '#b42318' : '#777';
+
+                state.style.fontWeight = 'bold';
+            }
+
+            if (ontRx) ontRx.textContent = data.ont_rx;
+            if (oltRx) oltRx.textContent = data.olt_rx;
+
+            if (distance && data.distance !== null) {
+                distance.textContent = data.distance + ' m';
+            }
+
+            if (time) time.textContent = data.time;
+
+            button.title = 'Odczyt zakończony pomyślnie';
+
+        } catch (error) {
+            alert('Odświeżanie ONT: ' + error.message);
+            button.title = 'Ostatni odczyt nie powiódł się';
+        } finally {
+            button.disabled = false;
+            button.textContent = original;
+        }
+    });
+})();
+</script>
+{/literal}
+
+
+{* HG-OPTICS-COLORS-V1 *}
+
+{literal}
+<style>
+#hg-list-table .hg-optical-good {
+    color: #187b32 !important;
+    font-weight: 700;
+    background: rgba(24,123,50,.07);
+}
+#hg-list-table .hg-optical-warning {
+    color: #a66b00 !important;
+    font-weight: 700;
+    background: rgba(220,165,0,.12);
+}
+#hg-list-table .hg-optical-alert {
+    color: #b42318 !important;
+    font-weight: 700;
+    background: rgba(180,35,24,.10);
+}
+#hg-list-table .hg-optical-unavailable {
+    color: #777 !important;
+    background: transparent;
+}
+</style>
+
+<script>
+(function () {
+    'use strict';
+
+    // Progi eksploatacyjne GPON B+ / C+.
+    const limits = {
+        ont: { min: -27, goodMin: -24, goodMax: -12, max: -9 },
+        olt: { min: -32, goodMin: -28, goodMax: -15, max: -12 }
+    };
+
+    const classes = [
+        'hg-optical-good',
+        'hg-optical-warning',
+        'hg-optical-alert',
+        'hg-optical-unavailable'
+    ];
+
+    function classify(raw, type) {
+        const normalized = String(raw)
+            .replace(',', '.')
+            .replace(/dBm/ig, '')
+            .trim();
+
+        if (normalized === '' || normalized === '—') {
+            return 'unavailable';
+        }
+
+        const value = Number(normalized);
+        if (!Number.isFinite(value)) return 'unavailable';
+
+        const t = limits[type];
+
+        if (value < t.min || value > t.max) return 'alert';
+
+        if (value >= t.goodMin && value <= t.goodMax) {
+            return 'good';
+        }
+
+        return 'warning';
+    }
+
+    function update() {
+        const table = document.getElementById('hg-list-table');
+        if (!table) return;
+
+        table.querySelectorAll('tbody tr').forEach(function (row) {
+            const cells = row.querySelectorAll('td');
+            if (cells.length < 9) return;
+
+            const state = row.querySelector('.hg-refresh-state')
+                || cells[4];
+
+            const offline = /\bOffline\b/i.test(state.textContent);
+
+            [
+                ['ont', row.querySelector('.hg-refresh-ont-rx') || cells[5]],
+                ['olt', row.querySelector('.hg-refresh-olt-rx') || cells[6]]
+            ].forEach(function (entry) {
+                const type = entry[0];
+                const cell = entry[1];
+                if (!cell) return;
+
+                classes.forEach(function (name) {
+                    cell.classList.remove(name);
+                });
+
+                const level = offline
+                    ? 'unavailable'
+                    : classify(cell.textContent, type);
+
+                cell.classList.add('hg-optical-' + level);
+
+                const labels = {
+                    good: 'Prawidłowy poziom optyczny',
+                    warning: 'Uwaga: sygnał blisko granicy',
+                    alert: 'Alarm: sprawdź tor optyczny',
+                    unavailable: 'Brak aktualnego pomiaru lub ONT offline'
+                };
+
+                cell.title = labels[level];
+            });
+        });
+    }
+
+    function init() {
+        const table = document.getElementById('hg-list-table');
+        if (!table) return;
+
+        update();
+
+        // Aktualizuje kolory również po odczycie AJAX.
+        const observer = new MutationObserver(function () {
+            update();
+        });
+
+        observer.observe(table, {
+            subtree: true,
+            childList: true,
+            characterData: true
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        init();
+    }
+})();
+</script>
+{/literal}
+
+
+</div>
+{include file="huaweigpondemo/shared-ui.html"}
+{/block}

@@ -1,0 +1,206 @@
+{extends file="layout.html"}
+
+{block name="module_content"}
+<div class="hg-ui hg-ui-vlans">
+
+<style>
+.hg-vlan-page {
+    max-width: 1350px;
+    margin: 0 auto;
+}
+
+.hg-vlan-box {
+    padding: 18px;
+    margin-bottom: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+.hg-vlan-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.hg-vlan-toolbar select {
+    min-width: 270px;
+    padding: 7px;
+}
+
+.hg-vlan-toolbar input {
+    padding: 7px;
+    min-width: 220px;
+}
+
+.hg-vlan-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.hg-vlan-table th,
+.hg-vlan-table td {
+    border-bottom: 1px solid #ddd;
+    padding: 9px;
+    text-align: left;
+}
+
+.hg-vlan-table th {
+    font-weight: bold;
+}
+
+.hg-vlan-error {
+    color: #b42318;
+    margin: 12px 0;
+}
+
+.hg-vlan-muted {
+    color: #777;
+}
+</style>
+
+<div class="hg-vlan-page">
+
+<h2>Huawei GPON — konfiguracja VLAN</h2>
+
+
+
+<div class="hg-vlan-box">
+
+    <div class="hg-vlan-toolbar">
+
+        <form class="hg-toolbar" method="get" id="hg-vlan-olt-form">
+            <input type="hidden"
+                   name="m"
+                   value="huaweigpondemovlans">
+
+            <label class="hg-olt-field">Urządzenie OLT<select data-hg-olt="1" id="hg-vlan-olt"
+                    name="olt_id"
+                    onchange="this.form.submit()">
+
+                {foreach $hd_vlan_olts as $olt}
+                    <option value="{$olt.id|escape}"
+                        {if $hd_vlan_olt_id == $olt.id}
+                            selected
+                        {/if}>
+                        {$olt.name|escape} — {$olt.host|escape}
+                    </option>
+                {/foreach}
+
+            </select></label>
+
+            <noscript>
+                <button type="submit">Wybierz</button>
+            </noscript>
+        </form>
+
+        <div class="hg-vlan-search-field">
+            <label for="hg-vlan-search" class="hg-vlan-search-label">
+                <strong>Wyszukaj VLAN</strong>
+            </label>
+
+            <input type="search"
+                   id="hg-vlan-search"
+                   placeholder="VLAN ID lub opis"
+                   oninput="hdVlanFilter()">
+        </div>
+
+        <div>
+            <a class="button"
+               href="?m=huaweigpondemovlans&amp;olt_id={$hd_vlan_olt_id|escape}">
+                Odśwież SNMP
+            </a>
+        </div>
+
+    </div>
+
+
+
+
+
+    {if $hd_vlan_error}
+        <p class="hg-vlan-error">
+            {$hd_vlan_error|escape}
+        </p>
+    {else}
+
+        <p>
+            Liczba odczytanych VLAN:
+            <strong>{$hd_vlan_count}</strong>
+        </p>
+
+        <div class="hg-ui-scroll"><table class="hg-ui-table hg-vlan-table" id="hg-vlan-table">
+            <thead>
+                <tr>
+                    <th style="width:160px">VLAN ID</th>
+                    <th>Opis VLAN</th>
+                    <th>Typ VLAN</th>
+                    <th>Atrybut</th>
+                    <th>Porty uplink</th>
+
+                </tr>
+            </thead>
+
+            <tbody>
+                {foreach $hd_vlan_rows as $vlan}
+                    <tr>
+                        <td>
+                            <strong>{$vlan.id|escape}</strong>
+                        </td>
+
+                        <td>
+                            {$vlan.description|escape}
+                        </td>
+                        <td>
+                            {$vlan.type|escape}
+                        </td>
+                        <td>
+                            {$vlan.attribute|escape}
+                        </td>
+                        <td>
+                            {$vlan.uplinks|escape}
+                        </td>
+    
+    
+                    </tr>
+                {foreachelse}
+                    <tr>
+                        <td colspan="5">
+                            Brak VLAN w odczycie SNMP.
+                        </td>
+                    </tr>
+                {/foreach}
+            </tbody>
+        </table></div>
+
+    {/if}
+
+</div>
+</div>
+
+<script>
+function hdVlanFilter() {
+    var input = document.getElementById('hg-vlan-search');
+    var table = document.getElementById('hg-vlan-table');
+
+    if (!input || !table) {
+        return;
+    }
+
+    var query = input.value.toLowerCase().trim();
+    var rows = table.querySelectorAll('tbody tr');
+
+    rows.forEach(function(row) {
+        var text = row.textContent.toLowerCase();
+
+        row.style.display =
+            text.indexOf(query) !== -1 ? '' : 'none';
+    });
+}
+</script>
+
+
+</div>
+{include file="huaweigpondemo/shared-ui.html"}
+{/block}

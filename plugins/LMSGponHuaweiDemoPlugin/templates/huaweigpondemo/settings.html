@@ -1,0 +1,535 @@
+{extends file="layout.html"}
+{block name="module_content"}
+<div class="hg-ui hg-ui-settings">
+
+<style>
+.hg-config {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+.hg-config h2 {
+    margin-bottom: 16px;
+}
+.hg-box {
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    padding: 14px 18px;
+    margin-bottom: 12px;
+}
+.hg-olt-select {
+    max-width: 100%;
+    padding: 5px;
+}
+.hg-olt-info {
+    color: #777;
+    font-size: 12px;
+    margin: 7px 0 0;
+}
+.hg-optics-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+.hg-optics-title {
+    width: 82px;
+    flex-shrink: 0;
+    font-weight: 700;
+}
+.hg-range {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.hg-range-title {
+    font-size: 13px;
+    font-weight: 600;
+}
+.hg-range-green .hg-range-title {
+    color: #248642;
+}
+.hg-range-alarm .hg-range-title {
+    color: #b72a2a;
+}
+.hg-range-fields {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.hg-small-field {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+.hg-small-field label {
+    font-size: 12px;
+}
+.hg-small-field input {
+    width: 66px;
+    max-width: 66px;
+    min-width: 0;
+    box-sizing: border-box;
+    padding: 4px 3px;
+    text-align: center;
+    font-size: 13px;
+}
+.hg-unit {
+    font-size: 11px;
+    color: #777;
+}
+.hg-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.hg-actions button {
+    padding: 6px 11px;
+}
+.hg-message {
+    font-weight: bold;
+    margin: 10px 0;
+}
+@media (max-width: 600px) {
+    .hg-box {
+        padding: 12px;
+    }
+    .hg-optics-row {
+        align-items: flex-start;
+        gap: 10px 15px;
+    }
+    .hg-optics-title {
+        width: 100%;
+    }
+    .hg-small-field input {
+        width: 60px;
+        max-width: 60px;
+    }
+}
+
+.hg-olt-edit {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: end;
+    margin: 12px 0;
+}
+.hg-edit-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.hg-edit-field label {
+    font-size: 12px;
+}
+.hg-edit-field input {
+    box-sizing: border-box;
+    width: 175px;
+    max-width: 100%;
+    padding: 5px;
+}
+.hg-edit-name input {
+    width: 245px;
+}
+.hg-edit-small input {
+    width: 90px;
+}
+.hg-edit-field input[readonly] {
+    opacity: .75;
+}
+@media (max-width: 600px) {
+    .hg-olt-edit {
+        gap: 10px;
+    }
+    .hg-edit-name {
+        width: 100%;
+    }
+    .hg-edit-name input {
+        width: 100%;
+    }
+}
+
+
+/* HG-SETTINGS-CRUD-V2 */
+.hg-config { max-width: 1140px; }
+.hg-config h2 { font-size: 21px; margin: 4px 0 18px; }
+.hg-box { background: rgba(255,255,255,.36); border-color: #c7ccd0;
+  border-radius: 9px; box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  padding: 18px 20px; margin-bottom: 16px; }
+.hg-box h3 { margin: 0 0 13px; font-size: 16px; }
+.hg-olt-edit { gap: 15px; }
+.hg-edit-field input { border-radius: 4px; }
+.hg-config button { padding: 7px 14px; cursor: pointer; }
+.hg-switch { display: block; margin: 5px 0 12px; font-weight: 600; }
+.hg-switch input { vertical-align: middle; }
+.hg-danger { border-left: 4px solid #b42318; }
+.hg-danger h3 { color: #a51f1f; }
+.hg-danger p { line-height: 1.6; margin: 8px 0 12px; }
+.hg-danger button { background: #a72828; color: white; border: 1px solid #8f1d1d;
+  border-radius: 4px; }
+.hg-danger input { width: 210px; max-width: 100%; padding: 6px; }
+@media (max-width: 680px) { .hg-box { padding: 14px; } }
+</style>
+
+<div class="hg-config">
+
+<h2>Huawei GPON — Konfiguracja wtyczki (DEMO RO)</h2>
+
+{if $hg_settings_message}
+<p class="hg-message" style="color:#248642">
+    {$hg_settings_message|escape}
+</p>
+{/if}
+
+{if $hg_settings_error}
+<p class="hg-message" style="color:#b72a2a">
+    {$hg_settings_error|escape}
+</p>
+{/if}
+
+<div class="hg-box">
+    <h3>Dodaj nowe urządzenie OLT</h3>
+
+    <form method="post" action="?m=huaweigpondemosettings"><fieldset style="border:0;padding:0;margin:0"{if !$demo_can_edit} disabled{/if}>
+
+        <input type="hidden" name="csrf"
+               value="{$hg_settings_csrf|escape}">
+
+        <input type="hidden"
+               name="action"
+               value="add">
+
+        <div class="hg-olt-edit">
+
+            <div class="hg-edit-field hg-edit-name">
+                <label>Nazwa nowego OLT</label>
+                <input type="text"
+                       name="name"
+                       maxlength="150"
+                       placeholder="np. OLT 2"
+                       required>
+            </div>
+
+            <div class="hg-edit-field">
+                <label>Adres IPv4</label>
+                <input type="text"
+                       name="host"
+                       maxlength="15"
+                       placeholder="192.168.1.10"
+                       required>
+            </div>
+
+            <div class="hg-edit-field">
+                <button type="submit">
+                    Dodaj OLT
+                </button>
+            </div>
+
+        </div>
+
+        <p class="hg-olt-info">
+             Adres IP można później edytować.
+            Nowe urządzenie zostanie zapisane jako nieaktywne.
+            Operacja nie nawiązuje połączenia SNMP.
+        </p>
+
+    </fieldset></form>
+</div>
+
+<fieldset class="hg-selected-olt-settings">
+<legend>Ustawienia OLT{if $hg_settings_selected}: {$hg_settings_selected.name|escape} — {$hg_settings_selected.host|escape}{/if}</legend>
+<div class="hg-box">
+
+
+    <form class="hg-toolbar" method="get" style="margin-top:8px">
+        <input type="hidden" name="m"
+               value="huaweigpondemosettings">
+
+        <label class="hg-olt-field">Urządzenie OLT<select data-hg-olt="1" name="olt_id" class="hg-olt-select"
+                onchange="this.form.submit()">
+            {foreach $hg_settings_olts as $olt}
+            <option value="{$olt.id|escape}"
+                {if $hg_settings_olt_id == $olt.id}selected{/if}>
+                {$olt.name|escape} — {$olt.host|escape}
+            </option>
+            {/foreach}
+        </select></label>
+        <noscript><button type="submit">Wybierz</button></noscript>
+    </form>
+
+    {if $hg_settings_selected}
+    <p class="hg-olt-info">
+        SNMP timeout:
+        {$hg_settings_selected.snmp_timeout|escape} s
+        | Retries:
+        {$hg_settings_selected.snmp_retries|escape}
+    </p>
+    {/if}
+</div>
+
+
+{if $hg_settings_selected}
+
+<div class="hg-box">
+    <h3>Ustawienia urządzenia OLT</h3>
+
+    <form method="post" action="?m=huaweigpondemosettings"><fieldset style="border:0;padding:0;margin:0"{if !$demo_can_edit} disabled{/if}>
+
+        <input type="hidden" name="olt_id"
+               value="{$hg_settings_olt_id|escape}">
+
+        <input type="hidden" name="csrf"
+               value="{$hg_settings_csrf|escape}">
+
+        <div class="hg-olt-edit">
+
+            <div class="hg-edit-field hg-edit-name">
+                <label>Nazwa urządzenia</label>
+                <input type="text"
+                       name="name"
+                       maxlength="150"
+                       value="{$hg_settings_selected.name|escape}"
+                       required>
+            </div>
+
+            <div class="hg-edit-field">
+                <label>Adres IPv4 do SNMP</label>
+                <input type="text" name="host"
+                       value="{$hg_settings_selected.host|escape}"
+                       inputmode="decimal" maxlength="15"
+                       pattern="[0-9.]+" required>
+            </div>
+
+            <div class="hg-edit-field hg-edit-small">
+                <label>SNMP timeout [s]</label>
+                <input type="number"
+                       name="timeout"
+                       value="{$hg_settings_selected.snmp_timeout|escape}"
+                       min="1" max="60"
+                       required>
+            </div>
+
+            <div class="hg-edit-field hg-edit-small">
+                <label>SNMP retries</label>
+                <input type="number"
+                       name="retries"
+                       value="{$hg_settings_selected.snmp_retries|escape}"
+                       min="0" max="5"
+                       required>
+            </div>
+
+        </div>
+
+        <p class="hg-olt-info">
+             Edycja IPv4 zmienia wyłącznie adres komunikacji LMS+ z OLT,
+             nie konfigurację urządzenia Huawei. Community RO pochodzi z bazy demo.
+        </p>
+
+        <label class="hg-switch"><input type="checkbox" name="enabled"
+            value="1" {if $hg_settings_selected.enabled == 't' || $hg_settings_selected.enabled == 1 || $hg_settings_selected.enabled === true}checked{/if}>
+            OLT aktywny (kolektory i odczyty SNMP)</label>
+        <input type="hidden" name="action" value="save">
+        <button type="submit">
+            Zapisz ustawienia OLT
+        </button>
+
+    </fieldset></form>
+</div>
+
+{* HG-SNMP-SECRETS-STAGE1-V1 *}
+<div class="hg-box">
+    <h3>Dostep SNMP (osobny dla kazdego OLT)</h3>
+    <p class="hg-olt-info">Community RO jest przechowywane jawnie w bazie demo. Puste pole zachowuje obecną wartość. Nie jest wymagany plik klucza.</p>
+    <form method="post" action="?m=huaweigpondemosettings"><fieldset style="border:0;padding:0;margin:0"{if !$demo_can_edit} disabled{/if}>
+        <input type="hidden" name="olt_id" value="{$hg_settings_olt_id|escape}">
+        <input type="hidden" name="csrf" value="{$hg_settings_csrf|escape}">
+        <input type="hidden" name="action" value="save_ro">
+        <div class="hg-olt-edit">
+            <div class="hg-edit-field">
+                <label for="hg-snmp-ro">Community RO — tylko odczyt</label>
+                <input id="hg-snmp-ro" type="password" name="community_ro" value="" autocomplete="new-password" maxlength="256" placeholder="{if $hg_snmp_presence.ro}Zapisane — wpisz, aby zmienic{else}Nie zapisano{/if}">
+                <span class="hg-olt-info">{if $hg_snmp_presence.ro}Zapisane w bazie{else}Brak w bazie{/if}</span>
+            </div>
+            <div class="hg-edit-field">
+                <label for="hg-snmp-rw">Community RW — zapis na OLT</label>
+                <input id="hg-snmp-rw" type="password" value="" disabled placeholder="Niedostępne w demo RO">
+                <span class="hg-olt-info">Niedostępne w demo RO</span>
+            </div>
+        </div>
+        <button type="submit">Zapisz community SNMP</button>
+    </fieldset></form>
+</div>
+
+<div class="hg-box">
+    <h3>SNMP Trap / Alerty — OLT ID: {$hg_settings_olt_id|escape}</h3>
+    <p class="hg-olt-info">Adres zarządzania {$hg_settings_selected.host|escape} jest rozpoznawany automatycznie.
+        Dodaj inne adresy źródłowe widoczne w trapach tego OLT, po jednym w wierszu.</p>
+    <form method="post" action="?m=huaweigpondemosettings"><fieldset style="border:0;padding:0;margin:0" disabled>
+        <input type="hidden" name="olt_id" value="{$hg_settings_olt_id|escape}">
+        <input type="hidden" name="csrf" value="{$hg_settings_csrf|escape}">
+        <input type="hidden" name="hg_olt_action" value="save_traps">
+        <div class="hg-olt-edit">
+            <div class="hg-edit-field">
+                <label for="hg-trap-sources">Dodatkowe adresy źródłowe trapów (IPv4)</label>
+                <textarea id="hg-trap-sources" name="trap_sources" rows="2" maxlength="1024" spellcheck="false" style="width:260px;max-width:100%;box-sizing:border-box;resize:vertical">{$hg_trap_sources|escape}</textarea>
+                <span class="hg-olt-info">Puste pole usuwa dodatkowe powiązania.</span>
+            </div>
+        </div>
+        <button type="submit">Zapisz ustawienia trapów</button>
+    </fieldset></form>
+    <div class="hg-ui-scroll">
+        <table class="hg-ui-table lmsbox" style="width:100%;margin-top:12px">
+            <tbody>
+                <tr><th>Stan eksportu logów</th><td>{$hg_trap_status.state|escape}</td></tr>
+                <tr><th>Ostatnia aktualizacja danych</th><td>{$hg_trap_status.updated|escape} <small>(Europe/Warsaw)</small></td></tr>
+                <tr><th>Ostatni trap tego OLT w dostępnych wpisach</th><td>{$hg_trap_status.last|escape}</td></tr>
+                <tr><th>Trapy tego OLT w ostatnich 200 wpisach</th><td>{$hg_trap_status.count|escape}</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <p class="hg-olt-info">Status dotyczy lokalnego eksportu dziennika snmptrapd. Zapis adresów przypisuje alerty do OLT i jego ONT;
+        nie zmienia odbioru trapów, community ani konfiguracji urządzenia.</p>
+</div>
+
+{/if}
+
+
+
+
+{if $hg_settings_selected}
+
+<form method="post" action="?m=huaweigpondemosettings"><fieldset style="border:0;padding:0;margin:0" disabled>
+
+<input type="hidden" name="olt_id"
+       value="{$hg_settings_olt_id|escape}">
+<input type="hidden" name="csrf"
+       value="{$hg_settings_csrf|escape}">
+
+{foreach [
+    'ont' => 'ONT RX',
+    'olt' => 'OLT RX'
+] as $type => $title}
+
+<div class="hg-box">
+    <div class="hg-optics-row">
+
+        <div class="hg-optics-title">
+            {$title|escape}
+        </div>
+
+        <div class="hg-range hg-range-green">
+            <div class="hg-range-title">
+                ● Poziom zielony
+            </div>
+
+            <div class="hg-range-fields">
+
+                <div class="hg-small-field">
+                    <label>Od</label>
+                    <input type="number"
+                        name="thresholds[optics.{$type}.good_min]"
+                        value="{$hg_settings_values["optics.$type.good_min"]|escape}"
+                        step="0.01" min="-50" max="10"
+                        required>
+                </div>
+
+                <div class="hg-small-field">
+                    <label>Do</label>
+                    <input type="number"
+                        name="thresholds[optics.{$type}.good_max]"
+                        value="{$hg_settings_values["optics.$type.good_max"]|escape}"
+                        step="0.01" min="-50" max="10"
+                        required>
+                </div>
+                <span class="hg-unit">dBm</span>
+            </div>
+        </div>
+
+        <div class="hg-range hg-range-alarm">
+            <div class="hg-range-title">
+                ● Granice alarmu
+            </div>
+
+            <div class="hg-range-fields">
+
+                <div class="hg-small-field">
+                    <label>Od</label>
+                    <input type="number"
+                        name="thresholds[optics.{$type}.min]"
+                        value="{$hg_settings_values["optics.$type.min"]|escape}"
+                        step="0.01" min="-50" max="10"
+                        required>
+                </div>
+
+                <div class="hg-small-field">
+                    <label>Do</label>
+                    <input type="number"
+                        name="thresholds[optics.{$type}.max]"
+                        value="{$hg_settings_values["optics.$type.max"]|escape}"
+                        step="0.01" min="-50" max="10"
+                        required>
+                </div>
+                <span class="hg-unit">dBm</span>
+            </div>
+        </div>
+
+    </div>
+</div>
+{/foreach}
+
+<div class="hg-box">
+    <div class="hg-actions">
+        <input type="hidden"
+               name="hg_optics_action"
+               value="save">
+        <button type="submit">
+            Zapisz ustawienia
+        </button>
+
+        <button type="submit"
+                onclick="this.form.elements['hg_optics_action'].value='reset'; return confirm('Przywrócić progi domyślne?');"
+                formnovalidate
+                >
+            Przywróć domyślne
+        </button>
+    </div>
+</div>
+
+</fieldset></form>
+
+{else}
+<p>Brak urządzeń OLT w bazie.</p>
+{/if}
+
+ 
+{if $hg_settings_selected}
+<div class="hg-box hg-danger">
+    <h3>Usuń urządzenie OLT i wszystkie jego dane z demo</h3>
+    <p>OLT: <strong>{$hg_settings_selected.name|escape}</strong>
+       (ID: {$hg_settings_olt_id|escape}).
+       Usunięte zostaną: <strong>{$hg_delete_counts.ports|escape} portów GPON</strong>,
+       <strong>{$hg_delete_counts.onts|escape} ONT</strong>,
+       <strong>{$hg_delete_counts.samples|escape} pomiarów</strong>
+       oraz indywidualne ustawienia odczytu i community RO tego OLT z demo.
+       <strong>Nie dotyczy abonentów LMS ani pełnej wersji wtyczki.</strong></p>
+    <p>Ta operacja jest nieodwracalna i nie zmienia konfiguracji Huawei.
+       Najpierw wykonaj kopię zapasową bazy danych.</p>
+    <form method="post" action="?m=huaweigpondemosettings"
+          onsubmit="return confirm('Czy na pewno usunąć OLT i jego dane wyłącznie z demo?');"><fieldset style="border:0;padding:0;margin:0"{if !$demo_can_edit} disabled{/if}>
+        <input type="hidden" name="olt_id" value="{$hg_settings_olt_id|escape}">
+        <input type="hidden" name="csrf" value="{$hg_settings_csrf|escape}">
+        <input type="hidden" name="action" value="delete">
+        {* HG-DELETE-BUTTON-V1 *}
+        <button type="submit">Usuń OLT i jego dane</button>
+    <input type="hidden" name="confirm_delete" value="1">
+</fieldset></form>
+</div>
+{/if}
+
+</fieldset>
+</div>
+
+
+</div>
+{include file="huaweigpondemo/shared-ui.html"}
+{/block}

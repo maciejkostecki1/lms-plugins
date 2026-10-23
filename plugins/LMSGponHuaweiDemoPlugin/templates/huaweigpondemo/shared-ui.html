@@ -1,0 +1,157 @@
+{* Shared presentation only: Huawei GPON pages. *}
+{literal}
+<style>
+.hg-ui { padding-top:12px; width:100%; max-width:1110px; margin:0; box-sizing:border-box; }
+.hg-ui > h2, .hg-ui h2 { font-size:16px; margin:0 0 14px; }
+.hg-ui h3 { font-size:14px; margin:18px 0 10px; }
+.hg-ui .hg-config, .hg-ui .hg-vlan-page, .hg-ui .hg-va, .hg-ui .hg-ve { max-width:100%; margin-left:0; margin-right:0; }
+.hg-ui .hg-ui-scroll { max-width:100%; overflow-x:auto; margin:10px 0 16px; }
+.hg-ui table.hg-ui-table { border:1px solid #333; border-collapse:collapse; box-sizing:border-box; }
+.hg-ui table.hg-ui-table th, .hg-ui table.hg-ui-table td { padding:6px 7px; line-height:1.4; vertical-align:middle; box-sizing:border-box; }
+.hg-ui table.hg-ui-table th { text-align:left; font-weight:600; background:#c9bf9d; color:#111; }
+.hg-ui table.hg-ui-table thead th { border-bottom:1px solid #333; white-space:nowrap; }
+.hg-ui table.hg-ui-table tbody tr:nth-child(odd) { background:rgba(255,255,255,.06); }
+.hg-ui table.hg-ui-table tbody tr:nth-child(even) { background:rgba(0,0,0,.03); }
+.hg-ui table.hg-ui-table tbody tr:hover { background:rgba(80,110,160,.10); }
+.hg-ui table.hg-ui-table td { overflow-wrap:anywhere; }
+.hg-ui .hg-toolbar { padding:10px!important; background:transparent!important; margin:0 0 10px!important; display:flex!important; flex-wrap:wrap; gap:10px!important; align-items:end!important; box-sizing:border-box; }
+.hg-ui .hg-toolbar label { display:flex; flex-direction:column; gap:3px; }
+.hg-ui .hg-toolbar select, .hg-ui .hg-toolbar input { max-width:100%; box-sizing:border-box; }
+.hg-ui .hg-toolbar button, .hg-ui .hg-toolbar > a { margin-bottom:1px; }
+.hg-ui .hg-box, .hg-ui .hg-vlan-box, .hg-ui .hg-va-box, .hg-ui .hg-ve-box { border:1px solid #bcb59d; border-radius:0; box-shadow:none; padding:12px 14px; background:transparent; }
+.hg-ui .hg-box h3, .hg-ui .hg-vlan-box h3, .hg-ui .hg-va-box h3, .hg-ui .hg-ve-box h3 { margin-top:0; }
+.hg-ui .hg-danger { border-left:4px solid #b42318; }
+.hg-ui-settings .hg-box { border-color:#77715f; background:#d8d2bd; }
+.hg-ui-settings .hg-muted, .hg-ui-settings .hg-small, .hg-ui-settings .hg-olt-info { color:#59564c; }
+.hg-ui-settings .hg-danger { border-left-color:#b42318; }
+.hg-ui-settings table.hg-ui-table { border-color:#625d4e; }
+.hg-ui-settings table.hg-ui-table th, .hg-ui-settings table.hg-ui-table td { border-bottom:1px solid #a39b84; }
+.hg-ui-settings input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),
+.hg-ui-settings select, .hg-ui-settings textarea {
+    border:1px solid #77715f; background:#f7f5ec; color:#222; border-radius:2px;
+}
+.hg-ui-settings textarea { padding:6px; }
+.hg-ui-settings input:focus-visible, .hg-ui-settings select:focus-visible, .hg-ui-settings textarea:focus-visible {
+    outline:2px solid #526c88; outline-offset:1px; border-color:#526c88;
+}
+.hg-ui-settings input[readonly], .hg-ui-settings input:disabled, .hg-ui-settings select:disabled { background:#e4e0d2; }
+.hg-ui .hg-muted, .hg-ui .hg-small, .hg-ui .hg-vlan-muted { color:#706d63; font-size:11px; }
+.hg-ui .hg-meta { margin:8px 0; line-height:1.5; }
+.hg-ui .hg-alert-notice { padding:10px 12px; border-left:3px solid #a66b00; background:rgba(220,165,0,.10); }
+.hg-ui .hg-kind { display:inline-block; font-size:11px; font-weight:600; }
+.hg-ui .hg-kind-alarm { color:#b42318; }
+.hg-ui .hg-kind-recovery { color:#187b32; }
+.hg-ui .hg-kind-notification { color:#3b566e; }
+.hg-ui .hg-kind-unknown { color:#706d63; }
+.hg-ui #hg-alert-table { width:980px; max-width:none; table-layout:fixed; }
+.hg-ui #hg-alert-table .hg-col-time { width:155px; }
+.hg-ui #hg-alert-table .hg-col-olt { width:120px; }
+.hg-ui #hg-alert-table .hg-col-category { width:145px; }
+.hg-ui #hg-alert-table .hg-col-event { width:340px; }
+.hg-ui #hg-alert-table .hg-col-gpon { width:155px; }
+.hg-ui #hg-alert-table .hg-col-ont { width:65px; }
+.hg-ui #hg-alert-table td:first-child, .hg-ui #hg-alert-table td:nth-child(2), .hg-ui #hg-alert-table td:last-child { white-space:nowrap; font-variant-numeric:tabular-nums; }
+.hg-ui #hg-alert-table small { display:block; margin-top:2px; color:#706d63; font-size:11px; }
+.hg-ui #hg-alert-table td:last-child, .hg-ui #hg-alert-table th:last-child { text-align:center; }
+.hg-ui #hg-list-table { width:1110px!important; min-width:1110px!important; }
+.hg-ui #hg-list-table .hg-optical-good, .hg-ui #hg-list-table .hg-optical-warning, .hg-ui #hg-list-table .hg-optical-alert { overflow-wrap:normal; }
+.hg-ui .hg-vlan-table { min-width:650px; background:#d8d2b9; }
+.hg-ui .hg-vlan-table th, .hg-ui .hg-vlan-table td { border-bottom:0; }
+.hg-ui .hg-client-ont-table { max-width:none; }
+.hg-ui-add .hg-toolbar > .hg-client-ont-actions,
+.hg-ui-clientadd .hg-toolbar > .hg-client-ont-actions { flex-basis:100%; margin:0; justify-content:flex-start; }
+/* Compact registration pages. */
+.hg-ui-add, .hg-ui-clientadd { max-width:720px; }
+.hg-ui-add > div:first-of-type,
+.hg-ui-clientadd > div:first-of-type { width:400px; max-width:100%; box-sizing:border-box; }
+.hg-ui-add > .hg-toolbar,
+.hg-ui-clientadd > .hg-toolbar { width:600px; max-width:100%; }
+.hg-ui-add .hg-client-ont-table,
+.hg-ui-clientadd .hg-client-ont-table { width:580px!important; max-width:100%; }
+.hg-ui-add .hg-client-ont-table th:nth-child(3),
+.hg-ui-add .hg-client-ont-table td:nth-child(3),
+.hg-ui-clientadd .hg-client-ont-table th:nth-child(3),
+.hg-ui-clientadd .hg-client-ont-table td:nth-child(3) { width:220px; }
+.hg-ui-add #hg-register-form table.hg-ui-table,
+.hg-ui-clientadd #hg-register-form table.hg-ui-table { width:700px!important; max-width:100%!important; }
+.hg-ui-add #hg-register-form th,
+.hg-ui-clientadd #hg-register-form th { width:160px; }
+.hg-ui-add #hg-register-form input[type="text"],
+.hg-ui-clientadd #hg-register-form input[type="text"] { max-width:100%!important; box-sizing:border-box; }
+/* Registration controls share the page background. */
+.hg-ui-add .hg-toolbar,
+.hg-ui-clientadd .hg-toolbar { background:transparent!important; padding:0!important; }
+.hg-ui-add > div:first-of-type,
+.hg-ui-clientadd > div:first-of-type { border:0!important; border-radius:0!important; padding:0!important; }
+.hg-ui-add > .hg-toolbar > .hg-ui-scroll,
+.hg-ui-clientadd > .hg-toolbar > .hg-ui-scroll { flex-basis:100%; min-width:0; }
+.hg-ui #hg-progress-log { background:transparent!important; }
+.hg-ui #hg-eth-grid .hg-eth-card,
+.hg-ui #hg-eth-grid .hg-eth-card:hover { background:transparent; }
+.hg-ui-vlans .hg-vlan-box { border:0; padding:0; border-radius:0; }
+.hg-ui-vlans #hg-vlan-olt-form { padding:0!important; }
+.hg-ui-vlans .hg-vlan-toolbar { align-items:center; }
+.hg-ui-vlans #hg-vlan-olt-form { margin:0!important; align-items:center!important; }
+.hg-ui-vlans .hg-vlan-toolbar > div { display:flex; align-items:center; gap:6px; }
+.hg-ui-vlans .hg-vlan-toolbar select,
+.hg-ui-vlans .hg-vlan-toolbar input { height:32px; box-sizing:border-box; }
+.hg-ui-vlans a.button {
+    box-sizing:border-box; display:inline-flex; align-items:center; justify-content:center;
+    gap:5px; min-height:28px; padding:4px 11px; border:1px solid #aaa;
+    border-radius:4px; background:#f5f4ef; color:#222; font:inherit;
+    text-decoration:none; cursor:pointer;
+}
+.hg-ui-vlans a.button:hover { background:#e8e6dc; }
+.hg-ui label.hg-olt-field { display:inline-flex; flex-direction:column; align-items:flex-start; gap:4px; font-weight:600; max-width:100%; }
+.hg-ui select[data-hg-olt="1"] {
+    width:300px!important; min-width:0!important; max-width:100%!important; height:30px!important;
+    padding:4px 7px!important; border:1px solid #77715f!important; border-radius:2px!important;
+    background:#f7f5ec!important; color:#222; font:inherit; font-weight:normal; box-sizing:border-box;
+}
+.hg-ui-list .hg-toolbar > label { gap:4px; font-weight:600; }
+.hg-ui-list .hg-toolbar select,
+.hg-ui-list .hg-toolbar input,
+.hg-ui-list .hg-toolbar button,
+.hg-ui-list .hg-toolbar > a {
+    height:30px; box-sizing:border-box; font:inherit; font-weight:normal;
+}
+.hg-ui-list .hg-toolbar select,
+.hg-ui-list .hg-toolbar input {
+    padding:4px 7px; border:1px solid #77715f; border-radius:2px; background:#f7f5ec; color:#222;
+}
+.hg-ui-list .hg-toolbar button,
+.hg-ui-list .hg-toolbar > a { margin-bottom:0; display:inline-flex; align-items:center; justify-content:center; }
+.hg-ui-vlans .hg-vlan-toolbar { align-items:flex-end; }
+.hg-ui-vlans .hg-vlan-toolbar > div.hg-vlan-search-field { flex-direction:column; align-items:flex-start; gap:4px; }
+.hg-ui-vlans .hg-vlan-search-label { font-weight:600; }
+.hg-ui-vlans #hg-vlan-search { height:30px; border:1px solid #77715f; border-radius:2px; background:#f7f5ec; }
+.hg-ui-vlans .hg-vlan-toolbar a.button { height:30px; }
+.hg-ui-settings .hg-selected-olt-settings { border:2px solid #77715f; margin:20px 0 0; padding:14px; min-width:0; box-sizing:border-box; }
+.hg-ui-settings .hg-selected-olt-settings > legend { padding:0 8px; font-size:14px; font-weight:600; color:#333126; }
+.hg-ui-settings .hg-selected-olt-settings > .hg-box:last-child { margin-bottom:0; }
+.hg-ui-alerts .hg-toolbar label { gap:4px; font-weight:600; }
+.hg-ui-alerts .hg-toolbar select { height:30px; min-width:180px; padding:4px 7px; border:1px solid #77715f; border-radius:2px; background:#f7f5ec; color:#222; font:inherit; font-weight:normal; box-sizing:border-box; }
+.hg-ui-alerts .hg-toolbar button { height:30px; margin-bottom:0; padding:4px 11px; border:1px solid #aaa; border-radius:4px; background:#f5f4ef; color:#222; font:inherit; cursor:pointer; }
+.hg-ui-alerts .hg-toolbar > a { height:30px; margin-bottom:0; display:inline-flex; align-items:center; }
+.hg-ui #hg-alert-table th:last-child,
+.hg-ui #hg-alert-table td:last-child { border-right:1px solid #333; }
+.hg-ui-profiles .hg-profile-tabs { padding:0!important; gap:8px!important; }
+.hg-ui-profiles .hg-profile-tabs > a {
+    display:inline-flex; align-items:center; justify-content:center; min-height:30px;
+    padding:4px 11px; border:1px solid #aaa; border-radius:4px; background:#f5f4ef;
+    color:#222; font:inherit; text-decoration:none; box-sizing:border-box;
+}
+.hg-ui-profiles .hg-profile-tabs > a:hover { background:#e8e6dc; }
+.hg-ui-profiles .hg-profile-tabs > a[aria-current="page"] { background:#c9bf9d; border-color:#77715f; font-weight:600; }
+.hg-ui-profiles #hg-ont-profiles-table { border-right:1px solid #333; }
+@media (max-width:700px) {
+    .hg-ui .hg-toolbar { align-items:flex-start!important; }
+    .hg-ui .hg-toolbar label { max-width:100%; }
+    .hg-ui .hg-box, .hg-ui .hg-vlan-box, .hg-ui .hg-va-box, .hg-ui .hg-ve-box { padding:10px; }
+}
+.hg-ui button:disabled { opacity:.6; cursor:not-allowed; }
+.hg-demo-notice { color:#59564c; font-size:11px; margin:12px 0; }
+</style>
+{/literal}
+<p class="hg-demo-notice">DEMO RO — odczyt OLT. Zmiany konfiguracji urządzeń są niedostępne.</p>
+

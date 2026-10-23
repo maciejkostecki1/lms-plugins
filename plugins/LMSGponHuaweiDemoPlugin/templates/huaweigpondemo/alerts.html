@@ -1,0 +1,38 @@
+{extends file="layout.html"}
+{block name="module_content"}
+<div class="hg-ui hg-ui-alerts">
+    <h2>Alerty OLT</h2>
+    <form class="hg-toolbar" method="get">
+        <input type="hidden" name="m" value="huaweigpondemoalerts">
+        <label>Urządzenie<select name="scope">
+            {foreach $huawei_alert_scopes as $key => $label}<option value="{$key|escape:'html'}"{if $huawei_alert_scope == $key} selected{/if}>{$label|escape:'html'}</option>{/foreach}
+        </select></label>
+        <label>Typ zdarzenia<select name="kind">
+            {foreach $huawei_alert_kinds as $key => $label}<option value="{$key|escape:'html'}"{if $huawei_alert_kind == $key} selected{/if}>{$label|escape:'html'}</option>{/foreach}
+        </select></label>
+        <button type="submit">Pokaż / odśwież</button>
+        <a href="?m=huaweigpondemoalerts">Wyczyść filtry</a>
+    </form>
+    <div class="hg-meta">Zdarzenia: <b>{$huawei_alert_count|escape:'html'}</b> | Ostatnio odebrane: {$huawei_alert_total|escape:'html'} | Limit: 200
+        <div class="hg-muted">Od najnowszych · czas odbioru: Europe/Warsaw · dane pobierane co 30 sekund</div>
+    </div>
+    {if $huawei_alert_error}<p class="hg-alert-notice" role="alert">{$huawei_alert_error|escape:'html'}</p>{/if}
+    <div class="hg-ui-scroll"><table id="hg-alert-table" class="hg-ui-table lmsbox">
+        <colgroup><col class="hg-col-time"><col class="hg-col-olt"><col class="hg-col-category"><col class="hg-col-event"><col class="hg-col-gpon"><col class="hg-col-ont"></colgroup>
+        <thead><tr><th>Czas odbioru</th><th>OLT</th><th>Kategoria</th><th>Zdarzenie</th><th>GPON / ifIndex</th><th>ONT</th></tr></thead>
+        <tbody>
+        {foreach $huawei_alert_rows as $alert}
+        <tr>
+            <td style="white-space:nowrap">{$alert.time|escape:'html'}</td>
+            <td>{$alert.olt|escape:'html'}</td>
+            <td>{$alert.scope_label|escape:'html'}<br><span class="hg-kind hg-kind-{$alert.kind|escape:'html'}">● {$alert.kind_label|escape:'html'}</span></td>
+            <td style="overflow-wrap:anywhere">{$alert.event|escape:'html'}<br><small>{$alert.oid|escape:'html'}</small></td>
+            <td>{$alert.gpon|escape:'html'}</td>
+            <td>{if $alert.ont !== ''}{$alert.ont|escape:'html'}{else}—{/if}</td>
+        </tr>
+        {foreachelse}<tr><td colspan="6">Brak zdarzeń spełniających wybrane filtry.</td></tr>{/foreach}
+        </tbody>
+    </table></div>
+</div>
+{include file="huaweigpondemo/shared-ui.html"}
+{/block}
