@@ -1,0 +1,3 @@
+# Replace the existing reminder entry; do not install a second copy.
+# Every-minute trigger; the script enforces the shared panel time and one run per day.
+* * * * * root /usr/bin/flock -n /var/lock/lnp-invoice-reminder.lock /usr/bin/php /var/www/html/lms/plugins/LMSNotifyPanelPlugin/bin/invoice-reminder.php -C /etc/lms/lms.ini --run >> /var/log/lms-reminder.log 2>&1

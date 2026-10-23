@@ -1,0 +1,4 @@
+# Every-minute trigger; scripts enforce the shared time in the panel (default 08:00).
+# Both overdue profiles remain disabled until switched on in the panel.
+* * * * * root /usr/bin/flock -n /var/lock/lnp-invoice-overdue.lock /usr/bin/php /var/www/html/lms/plugins/LMSNotifyPanelPlugin/bin/invoice-overdue.php --config-file=/etc/lms/lms.ini --profile=notify-overdue --apply >> /var/log/lms-invoice-overdue.log 2>&1
+* * * * * root /usr/bin/flock -n /var/lock/lnp-invoice-overdue-7.lock /usr/bin/php /var/www/html/lms/plugins/LMSNotifyPanelPlugin/bin/invoice-overdue.php --config-file=/etc/lms/lms.ini --profile=notify-overdue-7 --apply >> /var/log/lms-invoice-overdue.log 2>&1
