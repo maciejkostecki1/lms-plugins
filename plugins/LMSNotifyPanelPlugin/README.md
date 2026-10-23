@@ -172,3 +172,11 @@ Saldo i dług abonamentowy nadal obejmują wszystkie nierozliczone opłaty abona
 W repozytorium podpis przykładowego powiadomienia brzmi „Przykładowa Firma — przykladfirmy.net”. Przykładowy adres do opisu konfiguracji: `kontakt@przykladfirmy.net`; przed użyciem wpisz własny adres nadawcy. Domyślny adres wysyłki w kodzie pozostaje pusty.
 
 Wiadomości i adresy widoczne w działającym LMS mogą pochodzić z `lms.ini` lub wpisów `uiconfig` w bazie. Te dane nie są dołączone do repozytorium. Nie kopiuj własnych ustawień produkcyjnych do przykładów ani dokumentacji. W szablonach zachowaj symbole, np. `%name`, `%invoice`, `%bankaccount` i `%unpaid`; LMS podstawia dane podczas wykonania.
+
+## Wsparcie rozwoju
+
+Jeśli wtyczki są dla Ciebie przydatne, możesz dobrowolnie wesprzeć ich dalszy rozwój:
+
+[☕ Postaw kawę — wesprzyj rozwój wtyczek LMS](https://buycoffee.to/kostek_mostek)
+
+Wsparcie jest dobrowolne i nie stanowi opłaty za instalację ani gwarancji pomocy technicznej.
