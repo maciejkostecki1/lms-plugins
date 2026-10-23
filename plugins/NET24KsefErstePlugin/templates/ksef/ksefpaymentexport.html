@@ -1,0 +1,73 @@
+{extends file="layout.html"}
+{block name="module_content"}
+<h2>Przelewy KSeF → ERSTE — eksport TXT</h2>
+<p><strong>Eksport nie oznacza zapłaty.</strong> Po pobraniu zaimportuj i zatwierdź przelewy w bankowości ERSTE.</p>
+{if $ksef_payment_error}
+  <div class="alert alert-danger" style="color:#a00;font-weight:bold">{$ksef_payment_error|escape}</div>
+{/if}
+<form method="get" action="">
+  <input type="hidden" name="m" value="ksefpaymentexport">
+  <label>Podmiot:
+    <select name="division">
+      {foreach $ksef_payment_divisions as $division}
+        <option value="{$division.id|escape}" {if $division.id == $ksef_payment_division_id}selected{/if}>{$division.name|escape}</option>
+      {/foreach}
+    </select>
+  </label>
+  
+  
+  
+  
+  
+  <span class="lms-ui-date-period-container">
+    {date_period_preset from="#ksef-date-from" to="#ksef-date-to"}
+    <span>Data od:</span>
+    <input type="text" class="lms-ui-date"
+           id="ksef-date-from" name="date_from"
+           size="10" maxlength="10"
+           value="{$ksef_payment_date_from|replace:'-':'/'|escape}"
+           placeholder="rrrr/mm/dd">
+    <span>Data do:</span>
+    <input type="text" class="lms-ui-date"
+           id="ksef-date-to" name="date_to"
+           size="10" maxlength="10"
+           value="{$ksef_payment_date_to|replace:'-':'/'|escape}"
+           placeholder="rrrr/mm/dd">
+</span>
+  
+  <button type="submit">Pokaż faktury</button>
+</form>
+<form method="post" action="?m=ksefpaymentexport&amp;division={$ksef_payment_division_id|escape}">
+  <input type="hidden" name="action" value="export">
+  <input type="hidden" name="division" value="{$ksef_payment_division_id|escape}">
+  <input type="hidden" name="date_from" value="{$ksef_payment_date_from|escape}">
+  <input type="hidden" name="date_to" value="{$ksef_payment_date_to|escape}">
+  <input type="hidden" name="csrf_token" value="{$ksef_payment_csrf|escape}">
+  <table class="lmsbox" style="width:100%">
+    <tr><th><input type="checkbox" id="ksef_all" onclick="document.querySelectorAll('.ksef_invoice').forEach(function(c) {ldelim}c.checked=document.getElementById('ksef_all').checked;{rdelim});"> Wszystkie</th><th>Faktura</th><th>Sprzedawca</th><th>Kwota</th><th>VAT</th><th>MPP</th><th>Rachunek</th><th>Adres odbiorcy (wymagany)</th><th>Rozliczona</th></tr>
+    {foreach $ksef_payment_invoices as $invoice}
+      <tr>
+        <td><input type="checkbox" class="ksef_invoice" name="invoice_ids[]" value="{$invoice.id|escape}"></td>
+        <td>{$invoice.invoice_number|escape}</td>
+        <td>{$invoice.seller_name|escape}</td>
+        <td>{$invoice.gross_amount|escape} {$invoice.currency|escape}</td>
+        <td>{$invoice.vat_amount|escape} PLN</td>
+        <td><input type="checkbox" name="mpp_ids[]" value="{$invoice.id|escape}" title="Przelew podzielony (MPP)"></td>
+        <td>{$invoice.bank_account|escape}</td>
+        <td><input type="text" name="recipient_address[{$invoice.id|escape}]" maxlength="60" size="35" value="" placeholder="Ulica, numer, kod, miasto" title="Uzupełnij zweryfikowany adres z faktury"></td>
+        <td>{if $invoice.settled}Tak{else}Nie{/if}</td>
+      </tr>
+    {foreachelse}
+      <tr><td colspan="9">Brak faktur w wybranym okresie.</td></tr>
+    {/foreach}
+  </table>
+  <p>Adresy odbiorców uzupełnij na podstawie faktur. Nie są zapisywane w bazie.</p>
+  <p><button type="submit">Pobierz TXT ERSTE z zaznaczonych faktur</button></p>
+</form>
+{/block}
+
+
+
+
+
+
