@@ -55,6 +55,12 @@ Lista ma limit 200 dokumentów i obejmuje PLN, dodatnie kwoty oraz rachunki spe�
 
 Przed aktualizacją zachowaj kopię katalogu i konfiguracji. Po podmianie kodu odśwież autoloader. Wyłączenie wtyczki w LMS usuwa jej stronę z użycia; nie cofa plików wcześniej zaimportowanych do banku. Wtyczka nie ma własnego schematu bazy ani zadań cron.
 
+## Zrzut ekranu
+
+Widok przygotowano z szablonu wtyczki z fikcyjnymi dostawcami i fakturami. Numery rachunków złożone z zer są wyłącznie znacznikami przykładowymi. Wygląd zależy od motywu i wersji LMS.
+
+![Eksport Erste — wybór podmiotu, faktur i MPP](../../docs/screenshots/erste-eksport.jpg)
+
 ## Wsparcie rozwoju
 
 Jeśli wtyczki są dla Ciebie przydatne, możesz dobrowolnie wesprzeć ich dalszy rozwój:
