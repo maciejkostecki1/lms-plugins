@@ -28,6 +28,37 @@ Alerty wymagają odbiornika trapów i bezpiecznego eksportu do `/var/lib/lms-hua
 
 Archiwum nie zawiera bazy, prawdziwych community, danych klientów ani konfiguracji tego serwera. Dostęp do działającego demo może pokazywać rzeczywiste dane lokalnej instalacji. Szczegóły sprawdzeń: `DEMO-VERIFICATION.md`.
 
+## Zrzuty ekranu demo
+
+Widoki dokumentacyjne powstały z szablonów wtyczek z fikcyjnymi danymi. Adresy z zakresu `192.0.2.0/24`, numery seryjne, SSID i parametry nie opisują rzeczywistej sieci. Wygląd zależy od motywu i wersji LMS.
+
+Lista ONT w demo: filtrowanie, status połączenia, poziomy optyczne, odległość i odświeżanie odczytu.
+
+![Huawei GPON DEMO RO — lista ONT](../../docs/screenshots/huawei-demo-lista.jpg)
+
+<a id="pelna-wersja-huawei-gpon"></a>
+## Pełna wersja Huawei GPON
+
+**Poniższe zrzuty pokazują pełną wersję Huawei GPON. Przedstawione dodatkowe funkcje nie są dostępne w DEMO RO, a kod pełnej wersji nie jest dołączony do tego repozytorium.**
+
+### Auto Find i rejestracja ONT
+
+Wykrywanie niezarejestrowanych ONT, wybór terminala, dobór profili line/service, opis urządzenia oraz przygotowanie rejestracji z usługami Internet i opcjonalnie IPTV.
+
+![Pełna wersja Huawei — Auto Find i formularz rejestracji ONT](../../docs/screenshots/huawei-pelna-rejestracja.jpg)
+
+### WAN i porty Ethernet
+
+Pełna wersja pokazuje parametry WAN, adresację, VLAN i porty LAN z ich stanem, prędkością oraz duplexem. Udostępnia również operacje konfiguracji urządzenia, zależne od modelu, uprawnień i ustawień zapisu.
+
+![Pełna wersja Huawei — WAN i porty LAN](../../docs/screenshots/huawei-pelna-ont.jpg)
+
+### Wi-Fi 2,4 GHz i 5 GHz
+
+Podgląd SSID i liczby połączonych stacji oraz dostęp do ustawień Wi-Fi. Obsługiwany zakres odczytu i konfiguracji zależy od modelu ONT i jego oprogramowania.
+
+![Pełna wersja Huawei — Wi-Fi w dwóch pasmach](../../docs/screenshots/huawei-pelna-wifi.jpg)
+
 ## Wsparcie rozwoju
 
 Jeśli wtyczki są dla Ciebie przydatne, możesz dobrowolnie wesprzeć ich dalszy rozwój:
