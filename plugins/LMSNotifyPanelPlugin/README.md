@@ -173,6 +173,18 @@ W repozytorium podpis przykładowego powiadomienia brzmi „Przykładowa Firma �
 
 Wiadomości i adresy widoczne w działającym LMS mogą pochodzić z `lms.ini` lub wpisów `uiconfig` w bazie. Te dane nie są dołączone do repozytorium. Nie kopiuj własnych ustawień produkcyjnych do przykładów ani dokumentacji. W szablonach zachowaj symbole, np. `%name`, `%invoice`, `%bankaccount` i `%unpaid`; LMS podstawia dane podczas wykonania.
 
+## Zrzuty ekranu
+
+Podglądy przygotowano z szablonów wtyczki z fikcyjnymi klientami, kwotami i adresem nadawcy. Nie są to dane z działającej instalacji. Wygląd zależy od motywu i wersji LMS.
+
+### Lista klientów i działania
+
+![Lista klientów, progi zadłużenia i dostępne działania](../../docs/screenshots/platnosci-lista.jpg)
+
+### Ustawienia progów i treści powiadomień
+
+![Ustawienia progów, nadawcy i przykładowej wiadomości](../../docs/screenshots/platnosci-ustawienia.jpg)
+
 ## Wsparcie rozwoju
 
 Jeśli wtyczki są dla Ciebie przydatne, możesz dobrowolnie wesprzeć ich dalszy rozwój:
