@@ -42,6 +42,14 @@ Pełna wersja udostępnia dodatkowo Auto Find i rejestrację ONT, konfigurację 
 
 ![Pełna wersja Huawei — WAN i porty LAN, funkcje niedostępne w demo](docs/screenshots/huawei-pelna-ont.jpg)
 
+Rejestracja ONT klienta, informacje o urządzeniu i menu pełnej wersji Huawei:
+
+![Pełna wersja Huawei — rejestracja ONT klienta](docs/screenshots/huawei-rejestracja-klienta.jpg)
+
+![Pełna wersja Huawei — informacje o ONT](docs/screenshots/huawei-informacje-ont.jpg)
+
+![Pełna wersja Huawei — menu wtyczki](docs/screenshots/huawei-menu-pelna.jpg)
+
 ## Wsparcie rozwoju
 
 Jeśli wtyczki są dla Ciebie przydatne, możesz dobrowolnie wesprzeć ich dalszy rozwój:
