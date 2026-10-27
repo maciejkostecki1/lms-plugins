@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/NotifySmsCompany.php';
 final class NotifyPolicy
 {
     public static function defaults(): array
@@ -7,7 +8,7 @@ final class NotifyPolicy
         return ['notify_percent'=>200, 'block_percent'=>300, 'suspend_percent'=>400, 'auto_notify'=>false,
             'auto_block'=>false, 'auto_unblock'=>false, 'channels'=>['mail'],
             'repeat_days'=>7, 'block_after_days'=>0, 'sender_email'=>'', 'sender_name'=>'Obsługa klienta',
-            'subject'=>'Przypomnienie o płatności',
+            'subject'=>'Przypomnienie o płatności','sms_body'=>NotifySmsCompany::defaultTemplate(),
             'body'=>'Szanowny Kliencie, saldo wynosi %balance zł. Prosimy o uregulowanie zadłużenia %debt zł. Numer klienta: %cid.'];
     }
     public static function validate(array $input): array
@@ -38,6 +39,9 @@ final class NotifyPolicy
             throw new InvalidArgumentException('Nieprawidłowy adres nadawcy.');
         }
         if (trim($s['body']) === '' || trim($s['subject']) === '') throw new InvalidArgumentException('Uzupełnij temat i treść.');
+        if(!is_string($s['sms_body']))throw new InvalidArgumentException('Nieprawidlowa tresc SMS.');
+        NotifySmsCompany::validateTemplate($s['sms_body']);
+        foreach([1,2] as $division)NotifySmsCompany::message($division,$s['block_after_days'],9999.99,$s['sms_body']);
         return array_intersect_key($s, self::defaults());
     }
     public static function decision(float $balance, array $monthly, array $s): array

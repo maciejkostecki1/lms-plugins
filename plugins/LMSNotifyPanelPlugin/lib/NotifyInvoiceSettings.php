@@ -29,7 +29,7 @@ final class NotifyInvoiceSettings
     {
         if($section==='notify-reminder')return $p;
         $p['subject']=$section==='notify-overdue'?'Przypomnienie o płatności za fakturę %invoice':'Ponowne przypomnienie o fakturze %invoice';
-        $p['message']="Dzień dobry %name,\n\nNie odnotowaliśmy pełnej płatności za bieżącą fakturę abonamentową %invoice.\nTermin płatności: %deadline-y-%deadline-m-%deadline-d\nKwota faktury: %value\nPozostało do zapłaty: %unpaid\n\nProsimy o wpłatę na rachunek: %bankaccount\nJeśli płatność została już wykonana, prosimy o kontakt w celu jej wyjaśnienia.\n\nPrzykładowa Firma — przykladfirmy.net";
+        $p['message']="Dzień dobry %name,\n\nNie odnotowaliśmy pełnej płatności za bieżącą fakturę abonamentową %invoice.\nTermin płatności: %deadline-y-%deadline-m-%deadline-d\nKwota faktury: %value\nPozostało do zapłaty: %unpaid\n\nProsimy o wpłatę na rachunek: %bankaccount\nJeśli płatność została już wykonana, prosimy o kontakt w celu jej wyjaśnienia.\n\nNet-24h";
         return $p;
     }
     public function save(string $section,array $input): void

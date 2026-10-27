@@ -10,7 +10,7 @@ final class NotifyBulk
         if($this->panel->settings()['revision']!==$revision)throw new RuntimeException('Ustawienia zmieniły się. Przygotuj nowy podgląd.');
         $ids=array_values(array_unique(array_map('intval',$ids)));
         if(!$ids || count($ids)>100000 || min($ids)<1)throw new RuntimeException('Brak poprawnych odbiorców.');
-        if(!in_array($mode,['plain','history'],true))throw new RuntimeException('Nieznany rodzaj wysyłki.');
+        if(!in_array($mode,['plain','history','sms_no_mail'],true))throw new RuntimeException('Nieznany rodzaj wysyłki.');
         if($mode==='history')foreach($ids as $customer){
             if(!is_string($hashes[$customer]??null) || !preg_match('/^[a-f0-9]{64}$/D',$hashes[$customer]))throw new RuntimeException('Brak podglądu historii jednego z klientów.');
         }
@@ -55,7 +55,7 @@ final class NotifyBulk
                 // Persist before calling the sender; interrupted items are never retried automatically.
                 $this->db->Execute('UPDATE lnp_bulk_items SET status=?,details=? WHERE jobid=? AND customerid=?',['working','Wynik nieznany — w razie przerwania sprawdź historię wiadomości LMS.',$id,$customer]);
                 try{
-                    $result=$this->panel->act($customer,$job['mode']==='history'?'notify_history':'notify_manual',(int)$job['revision'],$r['history_hash'],false,(bool)$job['start_countdown']);
+                    $result=$this->panel->act($customer,$job['mode']==='history'?'notify_history':($job['mode']==='sms_no_mail'?'notify_sms_no_mail':'notify_manual'),(int)$job['revision'],$r['history_hash'],false,(bool)$job['start_countdown']);
                     $state=strpos($result,'Kanały przyjęte do wysyłki: ')===0?'done':(strpos($result,'Częściowy lub nieznany')===0?'error':'skipped');
                 }catch(Throwable $e){$state='error';$result=$e->getMessage();}
                 $this->db->Execute('UPDATE lnp_bulk_items SET status=?,details=? WHERE jobid=? AND customerid=?',[$state,$result,$id,$customer]);
