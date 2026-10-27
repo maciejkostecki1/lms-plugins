@@ -5,7 +5,7 @@ Repozytorium kodu trzech wtyczek pobranego z instalacji LMS 23 października 202
 | Katalog | Wtyczka | Wersja |
 | --- | --- | --- |
 | `plugins/NET24KsefErstePlugin` | Eksport przelewów KSeF do Erste | Brak deklaracji wersji |
-| `plugins/LMSNotifyPanelPlugin` | Płatności i blokady | 0.7.4 |
+| `plugins/LMSNotifyPanelPlugin` | Płatności i blokady | 0.8.0 |
 | `plugins/LMSGponHuaweiDemoPlugin` | Huawei GPON — DEMO RO | 1.1.0-demo-ro-lite |
 
 ## Instalacja
