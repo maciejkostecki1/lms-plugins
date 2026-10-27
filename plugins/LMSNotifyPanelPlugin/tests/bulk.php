@@ -14,6 +14,7 @@ $fake=new class {
     public function act($id,$action,$revision,$hash=null,$automatic=false,$countdown=false):string{
         $this->countdownCalls[$id]=$countdown;
         if($action==='notify_history'){$this->historyCalls[$id]=$hash;return 'Kanały przyjęte do wysyłki: 1';}
+        if($action==='notify_sms_no_mail'){$this->calls[]=$id;return 'Kanały przyjęte do wysyłki: 1';}
         if($action!=='notify_manual')throw new LogicException('Bulk must use manual mode');
         $this->calls[]=$id;
         if($id===2)throw new RuntimeException('Customer paid since preview');
@@ -47,3 +48,5 @@ echo "PASS manual countdown defaults off and survives confirmed history job proc
 
 $id=$bulk->start([15],2,'plain',[],true);$bulk->process($id);if($fake->countdownCalls[15]!==true)throw new RuntimeException('Plain bulk countdown selection lost');
 echo "PASS explicit countdown for plain bulk job.\n";
+
+$id=$bulk->start([21],2,'sms_no_mail');$bulk->process($id);if($bulk->status($id)['mode']!=='sms_no_mail' || !in_array(21,$fake->calls,true))throw new RuntimeException('SMS mode lost');echo 'PASS SMS mode survives confirmed queue processing'.PHP_EOL;

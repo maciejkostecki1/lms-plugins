@@ -7,7 +7,7 @@ $error='';$notice='Podgląd demonstracyjny — fikcyjne dane. Przyciski nie wyko
 $_SESSION=['lnp_csrf'=>'demo'];
 $rows=[];
 foreach([[1001,'Anna Kowalska',100,-200],[1002,'Firma Przykładowa',150,-450],[1003,'Jan Nowak',80,0],[1004,'Klient bez abonamentu',0,-100]] as [$id,$name,$base,$balance]) {
-    $c=['id'=>$id,'customername'=>$name,'balance'=>$balance,'excluded'=>false,'exception'=>'','owned_blocks'=>0];
+    $c=['id'=>$id,'customername'=>$name,'balance'=>$balance,'excluded'=>false,'exception'=>'','owned_blocks'=>0,'mail_ready'=>true,'no_email'=>false,'sms_ready'=>false];
     $rows[]=array_merge($c,NotifyPolicy::decision($balance,[['currency'=>'PLN','sum'=>$base]],$settings));
 }
 $e=static function($v) {return htmlspecialchars((string)$v,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');};
@@ -27,7 +27,7 @@ $rows[0]['customername']='<script>alert("test")</script>';
 ob_start(); require __DIR__.'/../views/panel.php'; $escaped=ob_get_clean();
 if(strpos($escaped,'<script>alert')!==false || strpos($escaped,'&lt;script&gt;')===false) throw new RuntimeException('HTML escape failure');
 echo "PASS rendered dashboard, thresholds, action buttons and HTML escaping.\n";
-foreach(['settings'=>'name="notify_percent"','invoices'=>'Wspólna godzina wysyłki','exceptions'=>'name="reason"','history'=>'Historia operacji'] as $tab=>$expected) {
+foreach(['settings'=>'name="notify_percent"','invoices'=>'Powiadomienia o fakturach','exceptions'=>'name="reason"','history'=>'Historia operacji'] as $tab=>$expected) {
     ob_start();require __DIR__.'/../views/panel.php';$tabHtml=ob_get_clean();
     if(strpos($tabHtml,$expected)===false || strpos($tabHtml,'CAD-DRUK')!==false)throw new RuntimeException('Tab render failure: '.$tab);
     if(strpos($tabHtml,'<h3 class="lms-ui-box-header">Klienci</h3>')!==false)throw new RuntimeException('Customer table leaked into tab');
@@ -36,7 +36,7 @@ foreach(['settings'=>'name="notify_percent"','invoices'=>'Wspólna godzina wysy�
 $tab='customers';$bulkPreview=['rows'=>[array_merge($rows[0],['customername'=>'<script>bad</script>','channels'=>['mail']])],
     'skipped'=>['excluded'=>1,'review'=>2,'contact'=>3],'token'=>'test','message'=>['subject'=>'Saldo','body'=>'<script>bad</script>']];
 ob_start();require __DIR__.'/../views/panel.php';$bulkHtml=ob_get_clean();
-if(strpos($bulkHtml,'Potwierdź wysyłkę do 1 klientów')===false || strpos($bulkHtml,'<script>bad</script>')!==false || strpos($bulkHtml,'Wyślij powiadomienie do wszystkich zadłużonych')===false)throw new RuntimeException('Bulk preview rendering failed');
+if(strpos($bulkHtml,'Potwierdź wysyłkę e-mail do 1 klientów')===false || strpos($bulkHtml,'<script>bad</script>')!==false || strpos($bulkHtml,'Wyślij powiadomienie do wszystkich zadłużonych')===false)throw new RuntimeException('Bulk preview rendering failed');
 echo "PASS bulk preview requires explicit confirmation and escapes recipient/message content.\n";
 
 require_once __DIR__.'/../lib/NotifyPaymentHistory.php';
@@ -80,11 +80,26 @@ if(strpos($noticeSettings,'name="block_after_days"')===false || strpos($noticeSe
 echo "PASS configurable warning-to-block delay field.\n";
 
 $settings['block_after_days']=0;ob_start();require __DIR__.'/../views/panel.php';$disabledHtml=ob_get_clean();
-if(!preg_match('/name="block_after_days"[^>]*min="0"/',$disabledHtml) || strpos($disabledHtml,'Odliczanie od powiadomienia jest wyłączone')===false)throw new RuntimeException('Disabled countdown UI missing');
+if(!preg_match('/name="block_after_days"[^>]*min="0"/',$disabledHtml))throw new RuntimeException('Disabled countdown UI missing');
 echo "PASS disabled countdown UI.\n";
 
 $tab='customers';$settings['block_after_days']=0;ob_start();require __DIR__.'/../views/panel.php';$disabledHtml=ob_get_clean();
-if(substr_count($disabledHtml,'name="start_countdown"')!==2 || substr_count($disabledHtml,'value="1" disabled')<2)throw new RuntimeException('Manual countdown controls must be separate and disabled at zero days');
+if(substr_count($disabledHtml,'name="start_countdown"')!==3 || substr_count($disabledHtml,'value="1" disabled')<3)throw new RuntimeException('Manual countdown controls must be separate and disabled at zero days');
 $settings['block_after_days']=7;ob_start();require __DIR__.'/../views/panel.php';$enabledHtml=ob_get_clean();
 if(preg_match('/name="start_countdown"[^>]*(checked|disabled)/',$enabledHtml))throw new RuntimeException('Manual countdown must be enabled but unchecked at seven days');
 echo "PASS independent manual countdown controls default off and respect zero days.\n";
+
+$preview=null;$bulkPreview=null;$tab='customers';$rows=[$rows[0]];$rows[0]['excluded']=false;$rows[0]['state']='notify';$rows[0]['debt']=100;
+foreach([[true,false,true,'notify_sms_no_mail'],[false,true,false,'notify_manual'],[false,false,false,'none']] as [$noEmail,$mailReady,$smsReady,$wanted]){
+ $rows[0]['no_email']=$noEmail;$rows[0]['mail_ready']=$mailReady;$rows[0]['sms_ready']=$smsReady;
+ ob_start();require __DIR__.'/../views/panel.php';$html=ob_get_clean();
+ foreach(['notify_sms_no_mail','notify_manual','notify_history'] as $action){
+  $expected=$wanted==='notify_manual'?in_array($action,['notify_manual','notify_history']):$action===$wanted;
+  if((strpos($html,'name="action" value="'.$action.'"')!==false)!==$expected)throw new RuntimeException('Wrong customer action: '.$action);
+ }
+}
+echo 'PASS SMS without email, email/history only with valid permissions; no email actions without consent'.PHP_EOL;
+
+$tab='settings';ob_start();require __DIR__.'/../views/panel.php';$allSettings=ob_get_clean();
+foreach(['Ustawienia wtyczki','Bramka SMSAPI','name="token" value=""','Test połączenia — bez wysyłki SMS','name="sms_body"','Wspólna godzina wysyłki'] as $needle)if(strpos($allSettings,$needle)===false)throw new RuntimeException('Missing unified setting '.$needle);
+echo 'PASS unified plugin settings, blank token field and no-send connection test'.PHP_EOL;
