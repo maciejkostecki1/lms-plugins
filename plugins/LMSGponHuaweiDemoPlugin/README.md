@@ -36,6 +36,12 @@ Lista ONT w demo: filtrowanie, status połączenia, poziomy optyczne, odległoś
 
 ![Huawei GPON DEMO RO — lista ONT](../../docs/screenshots/huawei-demo-lista.jpg)
 
+### Menu demo
+
+Menu DEMO RO zawiera: Lista ONT, VLAN OLT, Alerty OLT i Konfiguracja wtyczki.
+
+![Menu Huawei GPON DEMO RO](../../docs/screenshots/huawei-menu-demo.jpg)
+
 <a id="pelna-wersja-huawei-gpon"></a>
 ## Pełna wersja Huawei GPON
 
@@ -46,6 +52,24 @@ Lista ONT w demo: filtrowanie, status połączenia, poziomy optyczne, odległoś
 Wykrywanie niezarejestrowanych ONT, wybór terminala, dobór profili line/service, opis urządzenia oraz przygotowanie rejestracji z usługami Internet i opcjonalnie IPTV.
 
 ![Pełna wersja Huawei — Auto Find i formularz rejestracji ONT](../../docs/screenshots/huawei-pelna-rejestracja.jpg)
+
+### Rejestracja ONT klienta
+
+Osobny formularz pozwala wybrać abonenta LMS, nadać opis ONT, wskazać profil usług i ONT ID oraz uruchomić rejestrację z konfiguracją usług. Na zrzucie pokazano cały formularz dla wcześniej wybranego terminala.
+
+![Pełna wersja Huawei — rejestracja ONT klienta](../../docs/screenshots/huawei-rejestracja-klienta.jpg)
+
+### Informacje o ONT
+
+Strona urządzenia pokazuje status, opis, poziomy optyczne ONT RX i OLT RX, OLT, port GPON, identyfikator ONT, numer seryjny, profile oraz parametry diagnostyczne. Dalsze sekcje tej strony obejmują abonenta LMS, WAN, LAN, Wi-Fi i historię optyki. Dostępność danych i operacji zależy od modelu i uprawnień.
+
+![Pełna wersja Huawei — strona informacji ONT](../../docs/screenshots/huawei-informacje-ont.jpg)
+
+### Menu pełnej wersji
+
+Menu zawiera: Lista ONT, AutoFind, Rejestracja ONT klienta, Konfiguracja profili, Karty OLT, VLAN OLT, Alerty OLT i Konfiguracja wtyczki.
+
+![Menu Huawei GPON — pełna wersja](../../docs/screenshots/huawei-menu-pelna.jpg)
 
 ### WAN i porty Ethernet
 
