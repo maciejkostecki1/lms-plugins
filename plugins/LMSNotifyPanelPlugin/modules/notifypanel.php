@@ -5,6 +5,7 @@ require_once __DIR__ . '/../lib/NotifyInvoiceSettings.php';
 require_once __DIR__ . '/../lib/NotifyCurrentInvoice.php';
 require_once __DIR__ . '/../lib/NotifyInvoiceSchedule.php';
 require_once __DIR__ . '/../lib/NotifyBulk.php';
+require_once __DIR__.'/../lib/NotifySmsSettings.php';
 $layout['pagetitle']='Płatności i blokady';
 if (!ConfigHelper::checkPrivilege('full_access') || (int)Auth::GetCurrentUser()<1) {
     http_response_code(403); die('Panel wymaga uprawnień administratora LMS.');
@@ -24,11 +25,11 @@ $page=max(1,(int)($_GET['page']??1));
 $rows=[];$history=[];$exceptions=[];$pagination=null;$snapshotTime=null;
 $invoiceProfiles=[];
 try {
-    $settings=$np->settings();
+    $settings=$np->settings();$smsSettings=(new NotifySmsSettings($DB))->settings();
     if (($_SERVER['REQUEST_METHOD']??'GET')==='POST') {
         if (!is_string($_POST['csrf']??null) || !hash_equals($_SESSION['lnp_csrf'],$_POST['csrf'])) throw new RuntimeException('Sesja wygasła. Odśwież panel.');
         $op=$_POST['op']??'';
-        $tab=in_array($op,['invoice_settings','invoice_schedule'],true)?'invoices':($op==='settings'?'settings':($op==='exception'?'exceptions':'customers'));
+        $tab=in_array($op,['invoice_settings','invoice_schedule','smsapi_settings','smsapi_test'],true)?'settings':($op==='settings'?'settings':($op==='exception'?'exceptions':'customers'));
         if($op==='bulk_process'){
             $result=$bulk->process((int)($_POST['jobid']??0));
             header('Content-Type: application/json; charset=UTF-8');echo json_encode($result,JSON_THROW_ON_ERROR);exit;
@@ -44,11 +45,12 @@ try {
             header('Content-Type: text/html; charset=UTF-8');header('Cache-Control: no-store');
             header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox");
             echo $attachment['data'];exit;
-        } elseif(in_array($op,['bulk_preview','bulk_history_preview'],true)){
-            $historyMode=$op==='bulk_history_preview';$previewSettings=$settings;
+        } elseif(in_array($op,['bulk_preview','bulk_history_preview','bulk_sms_preview'],true)){
+            $historyMode=$op==='bulk_history_preview';$smsMode=$op==='bulk_sms_preview';$previewSettings=$settings;
+            $previewSettings['channels']=$smsMode?['sms']:['mail'];
             if($historyMode)$previewSettings['channels']=['mail'];
-            $bulkPreview=$np->manualPreview($previewSettings);$token=bin2hex(random_bytes(24));$hashes=[];
-            $bulkPreview['mode']=$historyMode?'history':'plain';
+            $bulkPreview=$np->manualPreview($previewSettings,$smsMode);$token=bin2hex(random_bytes(24));$hashes=[];
+            $bulkPreview['mode']=$historyMode?'history':($smsMode?'sms_no_mail':'plain');
             $bulkPreview['start_countdown']=!empty($_POST['start_countdown']) && (int)$settings['block_after_days']>0;
             if($historyMode)foreach($bulkPreview['rows'] as &$row){
                 $attachment=NotifyPaymentHistory::build($DB,$row);
@@ -58,13 +60,17 @@ try {
             unset($row);
             $_SESSION['lnp_bulk_confirm']=['token'=>$token,'ids'=>array_map('intval',array_column($bulkPreview['rows'],'id')),'revision'=>$settings['revision'],'expires'=>time()+600,'mode'=>$bulkPreview['mode'],'hashes'=>$hashes,'start_countdown'=>$bulkPreview['start_countdown']];
             $bulkPreview['token']=$token;
-            if($bulkPreview['rows'])$bulkPreview['message']=$np->messagePreview($bulkPreview['rows'][0],$settings);
+            if($bulkPreview['rows'])$bulkPreview['message']=$np->messagePreview($bulkPreview['rows'][0],$previewSettings);
             if($historyMode && isset($bulkPreview['message']))$bulkPreview['message']['body'].="\n\nW załączniku przesyłamy historię płatności i rozliczeń Państwa konta.";
         } elseif($op==='bulk_start'){
             $draft=$_SESSION['lnp_bulk_confirm']??null;unset($_SESSION['lnp_bulk_confirm']);
             if(!$draft || !is_string($_POST['token']??null) || !hash_equals($draft['token'],$_POST['token']) || $draft['expires']<time())throw new RuntimeException('Podgląd zbiorczy wygasł lub został już wykorzystany.');
             $jobid=$bulk->start($draft['ids'],$draft['revision'],$draft['mode']??'plain',$draft['hashes']??[],!empty($draft['start_countdown']));$_SESSION['lnp_bulk_auto']=$jobid;
             header('Location: ?m=notifypanel&bulkjob='.$jobid);exit;
+        } elseif($op==='smsapi_settings'){
+            (new NotifySmsSettings($DB))->save($_POST,(int)Auth::GetCurrentUser());$notice='Zapisano ustawienia SMSAPI. Automatyczne SMS-y są wyłączone.';
+        } elseif($op==='smsapi_test'){
+            $notice=(new NotifySmsSettings($DB))->test();
         } elseif ($op==='settings') {
             $input=[];
             foreach(NotifyPolicy::defaults() as $key=>$value) {
@@ -84,7 +90,7 @@ try {
             if(($_POST['return_tab']??'')==='customers')$tab='customers';
         } elseif($op==='preview') {
             $action=(string)($_POST['action']??'');
-            if (!in_array($action,['notify','notify_manual','notify_history','block','unblock'],true)) throw new RuntimeException('Nie rozpoznano działania przycisku. Odśwież listę i spróbuj ponownie.');
+            if (!in_array($action,['notify','notify_manual','notify_history','notify_sms_no_mail','block','unblock'],true)) throw new RuntimeException('Nie rozpoznano działania przycisku. Odśwież listę i spróbuj ponownie.');
             $c=$np->inspect((int)($_POST['customerid']??0));
             if (!$c) throw new RuntimeException('Brak aktywnego klienta.');
             $token=bin2hex(random_bytes(24));
@@ -92,7 +98,12 @@ try {
                 'revision'=>$settings['revision'],'expires'=>time()+600);
             $preview=['customer'=>$c,'action'=>$action,'token'=>$token];
             if($action==='block')$preview['block_notice']=$np->blockNoticeStatus($c,$settings);
-            if(in_array($action,['notify','notify_manual','notify_history'],true))$preview=array_merge($preview,$np->messagePreview($c,$settings));
+            if(in_array($action,['notify','notify_manual','notify_history','notify_sms_no_mail'],true)){
+                $messageSettings=$settings;$messageSettings['channels']=$action==='notify_sms_no_mail'?['sms']:['mail'];
+                if($action==='notify_sms_no_mail' && $np->hasEmailContact((int)$c['id']))throw new RuntimeException('Klient ma wpisany adres e-mail.');
+                if(!$np->notificationTargets($c,$messageSettings))throw new RuntimeException('Brak właściwego kontaktu, zgody lub wymagany odstęp od ostatniej wysyłki.');
+                $preview=array_merge($preview,$np->messagePreview($c,$messageSettings));
+            }
             if($action==='notify_history'){
                 $preview['attachment']=NotifyPaymentHistory::build($DB,$c);
                 $_SESSION['lnp_confirm']['history_hash']=$preview['attachment']['hash'];
@@ -119,7 +130,7 @@ try {
             header('Location: ?'.http_build_query($redirect));exit;
         }
     }
-    $settings=$np->settings();
+    $settings=$np->settings();$smsSettings=(new NotifySmsSettings($DB))->settings();
     if(!empty($_GET['bulkjob'])){
         $bulkJob=$bulk->status((int)$_GET['bulkjob']);
         $bulkAuto=($_SESSION['lnp_bulk_auto']??0)===(int)$bulkJob['id'];unset($_SESSION['lnp_bulk_auto']);
@@ -139,10 +150,10 @@ try {
         $rows=$np->customerListDetails($pagination['rows']);
     } elseif($tab==='history')$history=$np->historyList();
     elseif($tab==='exceptions')$exceptions=$np->exceptionList();
-    elseif($tab==='invoices'){
+    elseif(in_array($tab,['invoices','settings'],true)){
         $invoiceProfiles=(new NotifyInvoiceSettings($DB,(int)Auth::GetCurrentUser()))->profiles();
         $invoiceSendTime=(new NotifyInvoiceSchedule($DB))->time();
-        $currentInvoices=array_values(array_filter(NotifyCurrentInvoice::load($DB,time()),static fn($i)=>(float)$i['unpaid']>0.009 && empty($i['closed'])));
+        if($tab==='invoices')$currentInvoices=array_values(array_filter(NotifyCurrentInvoice::load($DB,time()),static fn($i)=>(float)$i['unpaid']>0.009 && empty($i['closed'])));
     }
 } catch(Throwable $ex) {
     if(($_POST['op']??'')==='bulk_process'){
