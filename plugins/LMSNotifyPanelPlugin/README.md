@@ -1,4 +1,4 @@
-# Płatności i blokady — LMSNotifyPanelPlugin 0.7.4
+# Płatności i blokady — LMSNotifyPanelPlugin 0.8.0
 
 Wtyczka do LMS Plus. Bez zmian plików źródłowych LMS i bez zależności od wtyczki Huawei.
 
@@ -79,8 +79,8 @@ Skrypt bez `--apply` wyłącznie pokazuje kwalifikację. Nawet z `--apply` odmaw
 1. Zrób backup bazy LMS oraz listy aktywnych wtyczek. Zachowaj aktualny harmonogram zadań. Sprawdź istniejące mechanizmy blokowania/odblokowywania, żeby nie działały sprzecznie.
 2. Skopiuj katalog `LMSNotifyPanelPlugin` do `/var/www/html/lms/plugins/`. Pliki należą do administratora, proces WWW musi móc je czytać, bez prawa zapisu. Nie kopiuj przykładowych danych do LMS.
 3. Sprawdź składnię plików PHP i uruchom `php plugins/LMSNotifyPanelPlugin/tests/policy.php`.
-4. Z katalogu LMS wykonaj `php plugins/LMSNotifyPanelPlugin/bin/run.php --install-schema --config-file=/etc/lms/lms.ini`. Tworzy tabele `lnp_*` oraz stosuje dołączone migracje do wersji 0.7.4. Ponowne wykonanie odmawia nadpisania. Instalacja nie wysyła wiadomości ani nie blokuje urządzeń. Wymagane PostgreSQL oraz prawo tworzenia tabel dla konta LMS.
-Przy aktualizacji istniejącej instalacji wykonaj zamiast instalacji schematu: `php plugins/LMSNotifyPanelPlugin/bin/run.php --upgrade-schema --config-file=/etc/lms/lms.ini`. Uzupełnia schemat tabel wtyczki przez dołączone migracje do wersji 0.7.4; nie wysyła wiadomości ani nie blokuje klientów. Po kopiowaniu na systemie SELinux przywróć etykiety: `restorecon -RF /var/www/html/lms/plugins/LMSNotifyPanelPlugin`.
+4. Z katalogu LMS wykonaj `php plugins/LMSNotifyPanelPlugin/bin/run.php --install-schema --config-file=/etc/lms/lms.ini`. Tworzy pięć nowych tabel `lnp_*`. Ponowne wykonanie odmawia nadpisania. Instalacja nie wysyła wiadomości ani nie blokuje urządzeń. Wymagane PostgreSQL oraz prawo tworzenia tabel dla konta LMS.
+Przy aktualizacji starszej wersji do 0.3.0 wykonaj zamiast instalacji schematu: `php plugins/LMSNotifyPanelPlugin/bin/run.php --upgrade-schema --config-file=/etc/lms/lms.ini`. Dodaje wyłącznie tabelę własności zawieszeń `lnp_billing`; nie zawiesza rzeczywistych klientów. Po kopiowaniu na systemie SELinux przywróć etykiety: `restorecon -RF /var/www/html/lms/plugins/LMSNotifyPanelPlugin`.
 
 5. Odśwież standardowy classmap autoloadera: `composer dump-autoload --optimize --no-scripts --no-interaction`. To regeneruje pliki autoloadera w `vendor/`, bez edycji źródeł LMS i bez uruchamiania skryptów Composer. Następnie aktywuj wtyczkę w liście wtyczek LMS. Panel dostępny tylko dla administratorów `full_access`; dodatkowe uprawnienie menu samo nie wystarcza.
 6. Otwórz „Płatności i blokady”, sprawdź saldo i podstawę kilku znanych klientów. Ustaw adres nadawcy i treść. Sprawdź konfigurację SMTP/SMS LMS oraz zgody i oznaczenia kontaktów. SMS może powodować naliczenie opłat operatora.
@@ -167,28 +167,26 @@ Dodatnia liczba dni jest alternatywą wobec procentowego progu blokady: po termi
 ## Terminy płatności i procent zadłużenia — 0.7.4
 Saldo i dług abonamentowy nadal obejmują wszystkie nierozliczone opłaty abonamentowe. Procent, próg automatycznego powiadomienia, blokada w trybie 0 dni i zawieszenie naliczania uwzględniają wyłącznie pozostałe niezapłacone opłaty po upływie całego terminu płatności faktury. Przykład: termin 23 października oznacza wliczanie od 24 października o 00:00 Europe/Warsaw. Płatności są rozliczane jak dotychczas: przypisane do dokumentu w pierwszej kolejności na ten dokument, pozostałe FIFO. Brak rozpoznanego terminu powoduje skierowanie do weryfikacji. W trybie czasowym próg zawieszenia naliczania jest niezależny od progu procentowej blokady, np. 300%. Zmiana nie ustawia automatycznie 300% na istniejącej instalacji.
 
-## Dane przykładowe i własne szablony
 
-W repozytorium podpis przykładowego powiadomienia brzmi „Przykładowa Firma — przykladfirmy.net”. Przykładowy adres do opisu konfiguracji: `kontakt@przykladfirmy.net`; przed użyciem wpisz własny adres nadawcy. Domyślny adres wysyłki w kodzie pozostaje pusty.
+## Ustawienia wtyczki i SMSAPI
 
-Wiadomości i adresy widoczne w działającym LMS mogą pochodzić z `lms.ini` lub wpisów `uiconfig` w bazie. Te dane nie są dołączone do repozytorium. Nie kopiuj własnych ustawień produkcyjnych do przykładów ani dokumentacji. W szablonach zachowaj symbole, np. `%name`, `%invoice`, `%bankaccount` i `%unpaid`; LMS podstawia dane podczas wykonania.
+Zakładka „Ustawienia wtyczki” zawiera konfigurację bramki SMSAPI, progi i automatykę, szablony ręcznych e-maili i SMS-ów oraz godzinę i szablony powiadomień o fakturach. Zakładka „Powiadomienia o fakturach” pozostaje podglądem bieżących faktur.
 
-## Zrzuty ekranu
+Token SMSAPI, nadawca, numer testowy i uprawnienie do ręcznej wysyłki są przechowywane w tabeli wtyczki `lnp_sms_settings`. Token nie jest zwracany do formularza ani zapisywany w historii operacji. Puste pole tokenu zachowuje poprzednią wartość; osobna opcja pozwala usunąć token po wyłączeniu integracji. Kopie bazy zawierają również token i wymagają takiej samej ochrony jak baza LMS.
 
-Podglądy przygotowano z szablonów wtyczki z fikcyjnymi klientami, kwotami i adresem nadawcy. Nie są to dane z działającej instalacji. Wygląd zależy od motywu i wersji LMS.
+Przycisk „Test połączenia — bez wysyłki SMS” używa zapisanego numeru i nadawcy z parametrem testowym SMSAPI. Weryfikuje autoryzację i akceptację nadawcy bez wysyłania SMS-a. Nadawca oczekujący na weryfikację może powodować błąd 14 mimo poprawnego tokenu.
 
-### Lista klientów i działania
+Nowa instalacja lub aktualizacja schematu przez `bin/run.php --install-schema` / `--upgrade-schema` tworzy tabelę ustawień bramki. Konfiguracja SMSAPI nie wymaga sekcji `[sms]`, `[smsapi]` ani pliku `/etc/lms/smsapi.token`. Wtyczka przekazuje nazwę usługi w wywołaniu standardowej funkcji LMS, a jej handler odczytuje własne ustawienia.
 
-![Lista klientów, progi zadłużenia i dostępne działania](../../docs/screenshots/platnosci-lista.jpg)
+Automatyczne SMS-y do klientów są nadal blokowane niezależnie od pozostałych przełączników. Zezwolenie na ręczne SMS-y nie włącza wysyłki automatycznej.
 
-### Ustawienia progów i treści powiadomień
 
-![Ustawienia progów, nadawcy i przykładowej wiadomości](../../docs/screenshots/platnosci-ustawienia.jpg)
+## Wersja 0.8.0 — 27.10.2026
 
-## Wsparcie rozwoju
-
-Jeśli wtyczki są dla Ciebie przydatne, możesz dobrowolnie wesprzeć ich dalszy rozwój:
-
-[☕ Postaw kawę — wesprzyj rozwój wtyczek LMS](https://buycoffee.to/kostek_mostek)
-
-Wsparcie jest dobrowolne i nie stanowi opłaty za instalację ani gwarancji pomocy technicznej.
+- Zakładka „Powiadomienia o fakturach bieżących”.
+- Zbiorcza zakładka „Ustawienia wtyczki”: progi, szablony, harmonogram oraz token i nadawca SMSAPI.
+- Ręczne SMS-y dla zadłużonych bez adresu e-mail, osobny podgląd i zatwierdzenie.
+- Indywidualna kwota zadłużenia i podpis podmiotu; edytowalny szablon, licznik oraz podglądy obu podmiotów.
+- Przyciski przy kliencie zależne od kontaktów i zgód.
+- Test połączenia SMSAPI bez wysyłki; automatyczne SMS-y domyślnie wyłączone.
+- Przy aktualizacji uruchom migrację schematu `--upgrade-schema` przed otwarciem panelu. Token i nadawcę ustaw w panelu wtyczki; repozytorium nie zawiera danych dostępowych ani danych klientów.
