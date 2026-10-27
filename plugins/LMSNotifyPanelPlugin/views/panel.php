@@ -27,7 +27,7 @@ $labels=['block'=>'Do blokady','notify'=>'Do powiadomienia','ok'=>'Poniżej prog
 <?php if($notice): ?><div class="lms-ui-box-container lnp-message"><?= $e($notice) ?></div><?php endif ?>
 <?php if(isset($settings)): ?>
 <nav class="lms-ui-tab-button-panel lnp-tabs" aria-label="Zakładki panelu">
-<?php foreach(['customers'=>'Klienci','settings'=>'Ustawienia progów','invoices'=>'Powiadomienia o fakturach','exceptions'=>'Wyjątki','history'=>'Historia'] as $key=>$label): ?>
+<?php foreach(['customers'=>'Klienci','settings'=>'Ustawienia wtyczki','invoices'=>'Powiadomienia o fakturach bieżących','exceptions'=>'Wyjątki','history'=>'Historia'] as $key=>$label): ?>
 <a class="lms-ui-button lms-ui-link-button" href="<?= $e($url(['tab'=>$key])) ?>" <?= $tab===$key?'aria-current="page"':'' ?>><span class="lms-ui-label"><?= $e($label) ?></span></a>
 <?php endforeach ?>
 </nav>
@@ -39,10 +39,10 @@ $labels=['block'=>'Do blokady','notify'=>'Do powiadomienia','ok'=>'Poniżej prog
 <?php if($tab==='customers'): ?>
 <?php require __DIR__.'/bulk.php'; ?>
 <?php if($preview): $c=$preview['customer']; ?>
-<div class="lms-ui-box-container lnp-section"><h3 class="lms-ui-box-header">Podgląd: <?= $e(['notify'=>'powiadomienie','notify_manual'=>'powiadomienie ręczne','notify_history'=>'powiadomienie z historią płatności','block'=>'blokada','unblock'=>'odblokowanie'][$preview['action']]) ?></h3>
+<div class="lms-ui-box-container lnp-section"><h3 class="lms-ui-box-header">Podgląd: <?= $e(['notify'=>'powiadomienie','notify_manual'=>'powiadomienie e-mail','notify_sms_no_mail'=>'powiadomienie SMS','notify_history'=>'powiadomienie z historią płatności','block'=>'blokada','unblock'=>'odblokowanie'][$preview['action']]) ?></h3>
 <p><b>#<?= $e($c['id']) ?> <?= $e($c['customername']) ?></b> · saldo <?= $e(number_format($c['balance'],2,',',' ')) ?> zł · opłaty miesięczne brutto po rabatach <?= $e(number_format($c['base'],2,',',' ')) ?> zł · zadłużenie <?= $e($c['percent']??'—') ?>%</p>
 <?php if($c['excluded']): ?><div class="lms-ui-box-container lnp-message red">Wyjątek: <?= $e($c['exception']) ?>. Wykonanie zablokowane.</div><?php endif ?>
-<?php if(in_array($preview['action'],['notify','notify_manual','notify_history'],true)): ?><h4><?= $e($preview['subject']) ?></h4><pre><?= $e($preview['body']) ?></pre><p >Kanały: <?= $e(implode(', ',$preview['action']==='notify_history'?['mail']:$settings['channels'])) ?>.</p>
+<?php if(in_array($preview['action'],['notify','notify_manual','notify_history','notify_sms_no_mail'],true)): ?><?php if($preview['action']!=='notify_sms_no_mail'): ?><h4><?= $e($preview['subject']) ?></h4><pre><?= $e($preview['body']) ?></pre><?php endif ?><?php if(!empty($preview['sms_body'])): ?><h4>Treść SMS</h4><pre><?= $e($preview['sms_body']) ?></pre><?php endif ?><p >Kanały: <?= $e(implode(', ',$preview['action']==='notify_sms_no_mail'?['sms']:['mail'])) ?>.</p>
 <?php if(!empty($preview['attachment'])): ?><p><b>Załącznik: <?= $e($preview['attachment']['filename']) ?></b> · pozycji: <?= (int)$preview['attachment']['count'] ?> · odbiorcy: <?= $e(implode(', ',$preview['recipients'])) ?: 'Brak uprawnionych odbiorców — nic nie zostanie wysłane.' ?></p><details><summary>Podgląd załącznika HTML</summary><iframe title="Historia płatności klienta" sandbox="" referrerpolicy="no-referrer" style="width:100%;height:460px;border:1px solid #aaa" srcdoc="<?= $e($preview['attachment']['data']) ?>"></iframe></details><?php endif ?>
 <?php endif ?>
 <?php if(!empty($preview['block_notice'])): ?><p><b><?= $e($preview['block_notice']['reason']) ?></b><?php if($preview['block_notice']['due_at']): ?> Najwcześniej: <?= $e(date('d.m.Y H:i:s',$preview['block_notice']['due_at'])) ?><?php endif ?></p><?php endif ?>
@@ -50,7 +50,8 @@ $labels=['block'=>'Do blokady','notify'=>'Do powiadomienia','ok'=>'Poniżej prog
 <form method="post"><input type="hidden" name="csrf" value="<?= $e($_SESSION['lnp_csrf']) ?>"><input type="hidden" name="op" value="execute"><input type="hidden" name="token" value="<?= $e($preview['token']) ?>"><button <?= $preview['action']==='block' && empty($c['owned_blocks']) && empty($preview['block_notice']['ready'])?'disabled':'' ?> class="lms-ui-button <?= $preview['action']==='block'?'lms-ui-error':'' ?>"><span class="lms-ui-label"><?= $preview['action']==='notify_history'?'Potwierdź wysyłkę z historią płatności':'Potwierdź wykonanie dla tego klienta' ?></span></button> <a class="lms-ui-button lms-ui-link-button" href="?m=notifypanel">Anuluj</a></form>
 </div><?php endif ?>
 <div class="lms-ui-box-container lnp-section"><h3 class="lms-ui-box-header">Klienci</h3>
-<form method="post"><input type="hidden" name="csrf" value="<?= $e($_SESSION['lnp_csrf']) ?>"><input type="hidden" name="op" value="bulk_preview"><button type="submit" class="lms-ui-button"><span class="lms-ui-label">Wyślij powiadomienie do wszystkich zadłużonych</span></button> <label class="inline"><input type="checkbox" name="start_countdown" value="1" <?= (int)$settings['block_after_days']===0?'disabled':'' ?>> Uruchom odliczanie do blokady (niezależnie od automatycznej blokady)</label></form>
+<form method="post"><input type="hidden" name="csrf" value="<?= $e($_SESSION['lnp_csrf']) ?>"><input type="hidden" name="op" value="bulk_preview"><button type="submit" class="lms-ui-button"><span class="lms-ui-label">Wyślij powiadomienie do wszystkich zadłużonych — e-mail</span></button> <label class="inline"><input type="checkbox" name="start_countdown" value="1" <?= (int)$settings['block_after_days']===0?'disabled':'' ?>> Uruchom odliczanie do blokady (niezależnie od automatycznej blokady)</label></form>
+<form method="post"><input type="hidden" name="csrf" value="<?= $e($_SESSION['lnp_csrf']) ?>"><input type="hidden" name="op" value="bulk_sms_preview"><button type="submit" class="lms-ui-button"><span class="lms-ui-label">Wyślij SMS do wszystkich zadłużonych bez e-maila</span></button> <label class="inline"><input type="checkbox" name="start_countdown" value="1" <?= (int)$settings['block_after_days']===0?'disabled':'' ?>> Uruchom odliczanie do blokady</label></form>
 <form method="post"><input type="hidden" name="csrf" value="<?= $e($_SESSION['lnp_csrf']) ?>"><input type="hidden" name="op" value="bulk_history_preview"><button type="submit" class="lms-ui-button"><span class="lms-ui-label">Powiadom wszystkich zadłużonych z historią płatności</span></button> <label class="inline"><input type="checkbox" name="start_countdown" value="1" <?= (int)$settings['block_after_days']===0?'disabled':'' ?>> Uruchom odliczanie do blokady (niezależnie od automatycznej blokady)</label></form>
 <?php if(!empty($bulkJobs)): ?><p>Twoje ostatnie wysyłki: <?php foreach($bulkJobs as $bj): ?><a href="?m=notifypanel&amp;bulkjob=<?= (int)$bj['id'] ?>">#<?= (int)$bj['id'] ?> (<?= (int)$bj['total'] ?> klientów)</a> <?php endforeach ?></p><?php endif ?>
 <form method="get" id="lnp-customer-filter"><input type="hidden" name="m" value="notifypanel"><input type="hidden" name="tab" value="customers"><input type="hidden" name="sort" value="<?= $e($sort) ?>"><input type="hidden" name="direction" value="<?= $e($direction) ?>"><div><span>Wyszukaj klienta LMS</span><?= $customerSelector??'' ?></div> <button type="submit" class="lms-ui-button"><span class="lms-ui-label">Pokaż</span></button> <a href="?m=notifypanel">Wszyscy</a></form>
@@ -73,8 +74,8 @@ $labels=['block'=>'Do blokady','notify'=>'Do powiadomienia','ok'=>'Poniżej prog
 <?php if(!empty($c['notification_status'])): ?><p class="lms-ui-font-smaller"><b><?= $e($c['notification_status']) ?></b><?php if(!empty($c['notification_time'])): ?><br><?= $e((new DateTimeImmutable('@'.$c['notification_time']))->setTimezone(new DateTimeZone('Europe/Warsaw'))->format('d.m.Y H:i')) ?><?php endif ?></p><?php endif ?>
 </td><td>
 <?php if(!$c['excluded'] && $c['state']!=='review' && $c['debt']>0.009): ?><div class="lnp-action-row">
-<?php foreach(['notify_manual'=>'Powiadom','notify_history'=>'Powiadom z historią'] as $a=>$label): ?>
-<form method="post" class="inline"><input type="hidden" name="csrf" value="<?= $e($_SESSION['lnp_csrf']) ?>"><input type="hidden" name="op" value="preview"><input type="hidden" name="customerid" value="<?= $e($c['id']) ?>"><input type="hidden" name="action" value="<?= $e($a) ?>"><button type="submit" class="lms-ui-button"><span class="lms-ui-label"><?= $e($label) ?></span></button></form>
+<?php $notificationActions=!empty($c['no_email'])?['notify_sms_no_mail'=>'Powiadom SMS']:(!empty($c['mail_ready'])?['notify_manual'=>'Powiadom e-mail','notify_history'=>'Powiadom z historią']:[]); foreach($notificationActions as $a=>$label): ?>
+<form method="post" class="inline"><input type="hidden" name="csrf" value="<?= $e($_SESSION['lnp_csrf']) ?>"><input type="hidden" name="op" value="preview"><input type="hidden" name="customerid" value="<?= $e($c['id']) ?>"><input type="hidden" name="action" value="<?= $e($a) ?>"><button type="submit" class="lms-ui-button" <?= $a==='notify_sms_no_mail' && empty($c['sms_ready'])?'disabled title="Brak zgody SMS lub numeru do powiadomień"':'' ?>><span class="lms-ui-label"><?= $e($label) ?></span></button></form>
 <?php endforeach ?></div><?php endif ?>
 <?php if($c['excluded']): ?><p class="lms-ui-font-smaller lnp-customer-note"><b>Wyjątek:</b> <?= $e($c['exception']) ?></p><?php endif ?>
 <?php if(!empty($c['panel_exception']) && !empty($c['lms_protected'])): ?><p class="lms-ui-font-smaller">Dodatkowo działa ochrona klienta w LMS.</p><?php endif ?>
@@ -97,6 +98,8 @@ $labels=['block'=>'Do blokady','notify'=>'Do powiadomienia','ok'=>'Poniżej prog
 </div>
 <?php endif ?>
 <?php if($tab==='settings'): ?>
+<h2>Ustawienia wtyczki</h2>
+<?php require __DIR__.'/sms-settings.php'; ?>
 <div class="lms-ui-box-container lnp-section"><h3 class="lms-ui-box-header">Ustawienia progów, wiadomości i automatyki</h3>
 
 <form method="post"><input type="hidden" name="csrf" value="<?= $e($_SESSION['lnp_csrf']) ?>"><input type="hidden" name="op" value="settings"><input type="hidden" name="revision" value="<?= $e($settings['revision']) ?>">
@@ -114,7 +117,9 @@ $labels=['block'=>'Do blokady','notify'=>'Do powiadomienia','ok'=>'Poniżej prog
 <label><span>Nazwa nadawcy</span><input name="sender_name" maxlength="250" value="<?= $e($settings['sender_name']) ?>"></label>
 <label><span>Temat</span><input name="subject" maxlength="250" required value="<?= $e($settings['subject']) ?>"></label>
 </div>
-<label><span>Treść powiadomienia ręcznego</span><textarea name="body" required maxlength="8000"><?= $e($settings['body']) ?></textarea></label>
+<label><span>Treść powiadomienia ręcznego e-mail</span><textarea name="body" required maxlength="8000"><?= $e($settings['body']) ?></textarea></label>
+<label><span>Treść powiadomienia ręcznego SMS</span><textarea id="lnp-sms-template" name="sms_body" required maxlength="2000"><?= $e($settings['sms_body']) ?></textarea><small>%debt — kwota; %company — podpis podmiotu; %payment_request — prośba z terminem; %days — liczba dni. Limit: 1 SMS.</small></label>
+<?php require __DIR__.'/sms-preview.php'; ?>
 
 <?php foreach(['mail'=>'E-mail','sms'=>'SMS'] as $ch=>$label): ?><label><input type="checkbox" name="channels[]" value="<?= $e($ch) ?>" <?= in_array($ch,$settings['channels'])?'checked':'' ?>> <?= $e($label) ?></label><?php endforeach ?>
 
@@ -123,7 +128,7 @@ $labels=['block'=>'Do blokady','notify'=>'Do powiadomienia','ok'=>'Poniżej prog
 <button class="lms-ui-button"><span class="lms-ui-label">Zapisz ustawienia</span></button>
 </form></div>
 <?php endif ?>
-<?php if($tab==='invoices')require __DIR__.'/invoices.php'; ?>
+<?php if(in_array($tab,['settings','invoices'],true))require __DIR__.'/invoices.php'; ?>
 <?php if($tab==='exceptions'): ?>
 <div class="lms-ui-box-container lnp-section"><h3 class="lms-ui-box-header">Wyjątki dla klientów</h3>
 <div class="scroll"><table class="lmsbox lms-ui-background-cycle"><thead><tr><th>Klient</th><th>Wyjątek do</th><th>Powód</th><th>Działanie</th></tr></thead><tbody>

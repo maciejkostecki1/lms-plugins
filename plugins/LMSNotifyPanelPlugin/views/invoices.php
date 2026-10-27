@@ -1,4 +1,5 @@
-<div class="lms-ui-box-container lnp-section"><h3 class="lms-ui-box-header">Powiadomienia o fakturach</h3>
+<div class="lms-ui-box-container lnp-section"><h3 class="lms-ui-box-header">Powiadomienia o fakturach bieżących</h3>
+<?php if($tab==='settings'): ?>
 <div class="lms-ui-box-container lnp-section lnp-schedule"><h3 class="lms-ui-box-header">Wspólna godzina wysyłki</h3>
 
 <form method="post"><input type="hidden" name="csrf" value="<?= $e($_SESSION['lnp_csrf']) ?>"><input type="hidden" name="op" value="invoice_schedule">
@@ -20,7 +21,8 @@
 
 <button type="submit" class="lms-ui-button"><span class="lms-ui-label">Zapisz ten szablon</span></button></form></div>
 <?php endforeach ?></div>
-<?php if(isset($currentInvoices)): ?>
+<?php endif ?>
+<?php if($tab==='invoices' && isset($currentInvoices)): ?>
 <div class="lms-ui-box-container lnp-section"><h3 class="lms-ui-box-header">Bieżące faktury — podgląd bez wysyłki</h3>
 <p>Faktury abonamentowe z pozostałą kwotą do zapłaty: <?= count($currentInvoices) ?>.</p>
 <table class="lmsbox"><thead><tr><th>Klient</th><th>Faktura</th><th>Termin</th><th>Pozostało</th><th>Ocena</th></tr></thead><tbody>
