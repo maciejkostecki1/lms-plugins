@@ -15,3 +15,5 @@ CREATE TABLE lnp_exclusions (customerid integer PRIMARY KEY, until_time bigint N
 CREATE TABLE lnp_billing (assignmentid integer PRIMARY KEY, customerid integer NOT NULL,
     created_at bigint NOT NULL, monthly_base numeric(14,4) NOT NULL,
     source_tariffid integer, source_liabilityid integer);
+
+CREATE TABLE IF NOT EXISTS lnp_sms_settings (id integer PRIMARY KEY CHECK(id=1),payload text NOT NULL,token text NOT NULL DEFAULT '',revision integer NOT NULL DEFAULT 1);
