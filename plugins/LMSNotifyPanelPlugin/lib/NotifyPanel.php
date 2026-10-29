@@ -10,6 +10,8 @@ require_once __DIR__ . '/NotifySnapshot.php';
 require_once __DIR__.'/NotifyPaymentHistory.php';
 require_once __DIR__.'/NotifyBlockNotice.php';
 require_once __DIR__.'/NotifySmsCompany.php';
+require_once __DIR__.'/NotifySmsSettings.php';
+require_once __DIR__.'/NotifySmsDelivery.php';
 final class NotifyPanel
 {
     private $db;
@@ -99,7 +101,7 @@ final class NotifyPanel
         $c['mail_ready']=$c['email_status']==='';
         $c['no_email']=$c['email_status']==='Brak e-maila';
         $smsContacts=$this->db->GetCol('SELECT contact FROM customercontacts WHERE customerid=? AND (type & ?)=?',[$id,CONTACT_MOBILE|CONTACT_NOTIFICATIONS|CONTACT_DISABLED,CONTACT_MOBILE|CONTACT_NOTIFICATIONS])?:[];
-        $c['sms_ready']=!empty($c['smsnotice']) && (bool)array_filter($smsContacts,static fn($v)=>(bool)preg_match('/^\+?[0-9 ()-]{7,25}$/D',$v));
+        $c['sms_ready']=!empty($c['smsnotice']) && (bool)array_filter($smsContacts,static fn($v)=>NotifySmsApi::normalizeNumber($v)!==null);
         return $c;
     }
     public function customerListDetails(array $rows): array
@@ -171,7 +173,7 @@ final class NotifyPanel
     }
     public function act(int $id,string $action,int $revision,?string $historyHash=null,bool $automatic=false,bool $manualCountdown=false): string
     {
-        if (!in_array($action,['notify','notify_manual','notify_history','notify_sms_no_mail','block','unblock'],true) || $id<1) throw new RuntimeException('Nieprawidłowa operacja.');
+        if (!in_array($action,['notify','notify_manual','notify_history','notify_sms_no_mail','notify_sms','block','unblock'],true) || $id<1) throw new RuntimeException('Nieprawidłowa operacja.');
         // One sender/blocking operator per customer, shared by cron and UI.
         $lock=$this->db->GetOne('SELECT pg_try_advisory_lock(762319, ?)',[$id]);
         if (!in_array($lock,[true,1,'1','t'],true)) throw new RuntimeException('Operacja dla klienta już trwa.');
@@ -180,20 +182,27 @@ final class NotifyPanel
             if ($s['revision']!==$revision) throw new RuntimeException('Ustawienia się zmieniły. Odśwież podgląd.');
             $c=$this->inspect($id,$s);
             if (!$c || $c['excluded'] || $c['state']==='review') throw new RuntimeException('Klient wyłączony z działań lub wymaga weryfikacji.');
-            if (in_array($action,['notify','notify_manual','notify_history','notify_sms_no_mail'],true)) {
-                if(in_array($action,['notify_manual','notify_history','notify_sms_no_mail'],true) && (float)$c['debt']<=0.009)throw new RuntimeException('Brak długu abonamentowego.');
-                if ($action==='notify' && !in_array($c['state'],['notify','block'],true)) throw new RuntimeException('Saldo jest poniżej progu powiadomienia.');
-                if($action==='notify_sms_no_mail'){
+            if (in_array($action,['notify','notify_manual','notify_history','notify_sms_no_mail','notify_sms'],true)) {
+                if(in_array($action,['notify_manual','notify_history','notify_sms_no_mail','notify_sms'],true) && (float)$c['debt']<=0.009)throw new RuntimeException('Brak długu abonamentowego.');
+                if(!NotifyPolicy::notificationDue($c,$s))throw new RuntimeException('Zadłużenie po terminie jest poniżej progu powiadomienia '.$s['notify_percent'].'%. Próg obowiązuje także ręczne SMS-y i e-maile.');
+                if(in_array($action,['notify_sms_no_mail','notify_sms'],true)){
                     if($automatic)throw new RuntimeException('SMS bez e-maila wymaga ręcznego zatwierdzenia.');
-                    if($this->hasEmailContact($id))return 'Bez wysyłki: klient ma wpisany adres e-mail.';
+                    if($action==='notify_sms_no_mail' && $this->hasEmailContact($id))return 'Bez wysyłki: klient ma wpisany adres e-mail.';
                     $s['channels']=['sms'];
-                    return $this->notify($c,$s,null,$manualCountdown?'manual':null,true);
+                    if(!$historyHash || !hash_equals($historyHash,$this->smsPreviewHash($c,$s)))throw new RuntimeException('Numer, treść lub ustawienia SMS zmieniły się. Przygotuj nowy podgląd.');
+                    return $this->notify($c,$s,null,$manualCountdown?'manual':null,true,$historyHash);
                 }
                 if($action==='notify_manual')$s['channels']=['mail'];
                 if($action==='notify_history'){
                     $s['channels']=['mail'];$attachment=NotifyPaymentHistory::build($this->db,$c);
                     if(!$historyHash || !hash_equals($historyHash,$attachment['hash']))throw new RuntimeException('Historia płatności zmieniła się. Przygotuj nowy podgląd.');
                     return $this->notify($c,$s,$attachment,$manualCountdown?'manual':null);
+                }
+                // A manual threshold action previews only mail. SMS requires its own confirmation.
+                if(!$automatic)$s['channels']=['mail'];
+                elseif(in_array('sms',$s['channels'],true)){
+                    $sms=(new NotifySmsSettings($this->db))->settings();
+                    if(!$sms['enabled'] || !$sms['allow_customer_sms'])$s['channels']=array_values(array_diff($s['channels'],['sms']));
                 }
                 return $this->notify($c,$s,null,$automatic && $action==='notify'?'automatic':($manualCountdown?'manual':null));
             }
@@ -257,6 +266,7 @@ final class NotifyPanel
     }
     public function notificationTargets(array $c,array $s): array
     {
+        if(!NotifyPolicy::notificationDue($c,$s))return [];
         $id=(int)$c['id'];$targets=[];
         foreach($s['channels'] as $channel) {
             $action='notify_'.$channel;
@@ -267,8 +277,9 @@ final class NotifyPanel
             $contacts=$this->db->GetCol('SELECT DISTINCT contact FROM customercontacts WHERE customerid=? AND (type & ?)=? ORDER BY contact',
                 [$id,$flag|CONTACT_DISABLED,$flag])?:[];
             $contacts=array_values(array_filter($contacts,static function($v) use($channel) {
-                return $channel==='mail'?filter_var($v,FILTER_VALIDATE_EMAIL)!==false:(bool)preg_match('/^\+?[0-9 ()-]{7,25}$/D',$v);
+                return $channel==='mail'?filter_var($v,FILTER_VALIDATE_EMAIL)!==false:NotifySmsApi::normalizeNumber($v)!==null;
             }));
+            if($channel==='sms')$contacts=array_values(array_unique(array_map([NotifySmsApi::class,'normalizeNumber'],$contacts)));
             if(!$contacts) continue;
             if($channel==='mail' && !filter_var($s['sender_email'],FILTER_VALIDATE_EMAIL)) throw new RuntimeException('Ustaw adres nadawcy e-mail.');
             $targets[$channel]=$contacts;
@@ -279,27 +290,64 @@ final class NotifyPanel
     {
         return (bool)$this->db->GetOne("SELECT 1 FROM customercontacts WHERE customerid=? AND (type & ?)=? AND trim(contact)<>'' LIMIT 1",[$id,CONTACT_EMAIL,CONTACT_EMAIL]);
     }
-    public function manualPreview(?array $settings=null,bool $smsNoMail=false): array
+    public function manualPreview(?array $settings=null,bool $smsNoMail=false,?array $snapshot=null,bool $withHashes=true): array
     {
         $s=$settings??$this->settings();$rows=[];$emailCustomers=[];
         if($smsNoMail){
             $s['channels']=['sms'];
             $emailCustomers=array_fill_keys(array_map('intval',$this->db->GetCol("SELECT DISTINCT customerid FROM customercontacts WHERE (type & ?)=? AND trim(contact)<>''",[CONTACT_EMAIL,CONTACT_EMAIL])?:[]),true);
         }
-        $skipped=['excluded'=>0,'review'=>0,'contact'=>0];
-        foreach($this->customerSnapshot() as $c){
+        $skipped=['excluded'=>0,'review'=>0,'contact'=>0,'message'=>0,'threshold'=>0];
+        foreach($snapshot??$this->customerSnapshot() as $c){
             if((float)$c['debt']<=0.009)continue;
             if($smsNoMail && isset($emailCustomers[(int)$c['id']])){++$skipped['contact'];continue;}
             if($c['excluded']){++$skipped['excluded'];continue;}
             if($c['state']==='review'){++$skipped['review'];continue;}
+            if(!NotifyPolicy::notificationDue($c,$s)){++$skipped['threshold'];continue;}
             $targets=$this->notificationTargets($c,$s);
             if(!$targets){++$skipped['contact'];continue;}
             $c['channels']=array_keys($targets);
-            if($smsNoMail)$c['sms_body']=$this->messagePreview($c,$s)['sms_body'];
+            if($smsNoMail){
+                try{$c['sms_body']=$this->messagePreview($c,$s)['sms_body'];}
+                catch(RuntimeException $e){++$skipped['message'];continue;}
+                $c['sms_recipients']=$targets['sms'];
+                if($withHashes)$c['sms_hash']=$this->smsPreviewHash($c,$s);
+            }
             $rows[]=$c;
         }
         usort($rows,static fn($a,$b)=>$b['debt']<=>$a['debt']);
         return ['rows'=>$rows,'skipped'=>$skipped,'revision'=>$s['revision']];
+    }
+    public function smsEstimate(array $rows,array $gateway): array
+    {
+        $segments=0;$numbers=0;
+        foreach($rows as $row){
+            $count=count($row['sms_recipients']);$numbers+=$count;
+            $segments+=NotifySmsCompany::measure($row['sms_body'])['segments']*$count;
+        }
+        $rate=$gateway['segment_rate']??null;
+        $micros=$rate===null?null:(int)round((float)$rate*1000000);
+        return ['customers'=>count($rows),'numbers'=>$numbers,'segments'=>$segments,'rate'=>$rate,
+            'cost'=>$micros===null?null:($segments*$micros)/1000000];
+    }
+    public function customerStatistics(array $rows,array $s,array $gateway): array
+    {
+        $debtors=0;$block=0;$threshold=0;$thresholdHeld=0;
+        $gates=(new NotifyBlockNotice($this->db))->statuses($rows,$s);
+        foreach($rows as $c){
+            if((float)$c['debt']<=0.009)continue;
+            ++$debtors;
+            if($c['percent']!==null && (float)$c['percent']>=(int)$s['block_percent']){
+                ++$threshold;
+                if($c['excluded'] || $c['state']==='review')++$thresholdHeld;
+            }
+            if(!$c['excluded'] && $c['state']!=='review' && NotifyPolicy::internetBlockDue($c,$s,$gates[(int)$c['id']]))++$block;
+        }
+        $preview=['rows'=>[],'skipped'=>['message'=>0]];
+        if(!empty($gateway['enabled']) && !empty($gateway['allow_manual_sms']))$preview=$this->manualPreview($s,true,$rows,false);
+        return ['debtors'=>$debtors,'block'=>$block,'remaining'=>$debtors-$block,
+            'block_threshold'=>$threshold,'threshold_held'=>$thresholdHeld,'below_block_threshold'=>$debtors-$threshold,
+            'sms'=>$this->smsEstimate($preview['rows'],$gateway),'invalid_messages'=>$preview['skipped']['message']];
     }
     public function messagePreview(array $c,array $s): array
     {
@@ -314,12 +362,24 @@ final class NotifyPanel
         }
         return $message;
     }
-    private function notify(array $c,array $s,?array $attachment=null,?string $countdownOrigin=null,bool $manualSms=false): string
+    public function smsPreviewHash(array $c,array $s): string
+    {
+        $s['channels']=['sms'];
+        return $this->smsFingerprint((int)$c['id'],$this->notificationTargets($c,$s)['sms']??[],$this->messagePreview($c,$s)['sms_body']);
+    }
+    private function smsFingerprint(int $customer,array $recipients,string $body): string
+    {
+        $gateway=(new NotifySmsSettings($this->db))->settings();
+        return hash('sha256',json_encode(['customer'=>$customer,'recipients'=>$recipients,'body'=>$body,
+            'gateway_revision'=>$gateway['revision'],'sender'=>$gateway['sender']],JSON_THROW_ON_ERROR));
+    }
+    private function notify(array $c,array $s,?array $attachment=null,?string $countdownOrigin=null,bool $manualSms=false,?string $smsHash=null): string
     {
         $id=(int)$c['id']; $sent=0;$uncertain=false;
         foreach($this->notificationTargets($c,$s) as $channel=>$contacts){
             $action='notify_'.$channel;
             $message=$this->messagePreview($c,$s);$body=$channel==='sms'?$message['sms_body']:$message['body'];$subject=$message['subject'];
+            if($channel==='sms' && $manualSms && (!$smsHash || !hash_equals($smsHash,$this->smsFingerprint($id,$contacts,$body))))throw new RuntimeException('Podgląd SMS zmienił się. Przygotuj go ponownie.');
             if($attachment)$body.="\n\nW załączniku przesyłamy historię płatności i rozliczeń Państwa konta.";
             // A durable intent is recorded before the external API. An interrupted send is not retried automatically.
             $attachmentNote=$attachment?'Załącznik: '.$attachment['filename'].'; SHA256: '.$attachment['hash'].'. ':'';
@@ -336,11 +396,18 @@ final class NotifyPanel
                     if($channel==='mail') {
                         $result=$this->lms->SendMail($destination,['From'=>$s['sender_email'],'To'=>$destination,
                             'Subject'=>$subject,'Reply-To'=>$s['sender_email']],$body,$attachment?[$attachment]:null);
-                    } else $result=$this->lms->SendSMS(preg_replace('/[ ()-]/','',$destination),$body,$item,['service'=>'smsapi','lnp_manual'=>$manualSms]);
+                    } else {
+                        $delivery=new NotifySmsDelivery($this->db);$idx=$delivery->begin((int)$item,$destination);
+                        $result=$this->lms->SendSMS($destination,$body,$item,['service'=>'smsapi','lnp_manual'=>$manualSms,'lnp_automatic'=>!$manualSms,
+                            'lnp_idx'=>$idx,'prefix'=>'48','debug_phone'=>'','message_template'=>'%body','transliterate_message'=>false,'max_length'=>0]);
+                        $delivery->accepted((int)$item,is_array($result)?$result:[]);
+                    }
                     $status=is_int($result)?$result:(is_array($result)?(int)($result['status']??MSG_ERROR):MSG_ERROR);
                     $error=is_string($result)?$result:(is_array($result)?implode(', ',$result['errors']??[]):'');
                     $external=is_array($result)?($result['id']??null):null;
-                    $this->db->Execute('UPDATE messageitems SET status=?,lastdate=?NOW?,error=?,externalmsgid=? WHERE id=?',[$status,$error?:null,$external,$item]);
+                    $this->db->Execute('UPDATE messageitems SET status=?,lastdate=?NOW?,error=?,externalmsgid=? WHERE id=?'
+                        .($channel==='sms'?' AND NOT EXISTS(SELECT 1 FROM lnp_sms_delivery WHERE itemid=? AND report_at>0)':''),
+                        $channel==='sms'?[$status,$error?:null,$external,$item,$item]:[$status,$error?:null,$external,$item]);
                     if($status===MSG_ERROR) $allOk=false;
                     if(!in_array($status,[MSG_SENT,MSG_DELIVERED],true))$confirmed=false;
                 }
@@ -348,6 +415,10 @@ final class NotifyPanel
                 $this->db->Execute('UPDATE lnp_history SET result=?,details=? WHERE id=?',
                     [$allOk?'sent':'pending',$attachmentNote.'Wiadomości LMS: '.implode(', ',$messageIds).($allOk?' — przyjęte do wysyłki.':' — częściowy błąd, sprawdź LMS.'),$event]);
                 if($countdownOrigin!==null && $allOk && $confirmed)(new NotifyBlockNotice($this->db))->record($c,$s,$event,$messageItems,time(),$countdownOrigin);
+                if($channel==='sms' && $countdownOrigin!==null && $allOk && !$confirmed){
+                    $delivery=new NotifySmsDelivery($this->db);$delivery->pendingNotice($c,$event,$messageItems,$countdownOrigin);
+                    $delivery->reconcile($id,$this);
+                }
                 if($allOk) ++$sent;
                 else $uncertain=true;
             } catch(Throwable $e) {

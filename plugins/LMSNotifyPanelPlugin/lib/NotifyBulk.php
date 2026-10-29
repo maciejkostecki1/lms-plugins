@@ -11,13 +11,13 @@ final class NotifyBulk
         $ids=array_values(array_unique(array_map('intval',$ids)));
         if(!$ids || count($ids)>100000 || min($ids)<1)throw new RuntimeException('Brak poprawnych odbiorców.');
         if(!in_array($mode,['plain','history','sms_no_mail'],true))throw new RuntimeException('Nieznany rodzaj wysyłki.');
-        if($mode==='history')foreach($ids as $customer){
+        if(in_array($mode,['history','sms_no_mail'],true))foreach($ids as $customer){
             if(!is_string($hashes[$customer]??null) || !preg_match('/^[a-f0-9]{64}$/D',$hashes[$customer]))throw new RuntimeException('Brak podglądu historii jednego z klientów.');
         }
         $this->db->BeginTrans();
         try{
             $id=(int)$this->db->GetOne('INSERT INTO lnp_bulk_jobs(created_at,userid,revision,status,total,mode,start_countdown) VALUES(?,?,?,?,?,?,?) RETURNING id',[time(),$this->user,$revision,'running',count($ids),$mode,$startCountdown?1:0]);
-            foreach($ids as $customer)$this->db->Execute('INSERT INTO lnp_bulk_items(jobid,customerid,status,history_hash) VALUES(?,?,?,?)',[$id,$customer,'queued',$mode==='history'?$hashes[$customer]:null]);
+            foreach($ids as $customer)$this->db->Execute('INSERT INTO lnp_bulk_items(jobid,customerid,status,history_hash) VALUES(?,?,?,?)',[$id,$customer,'queued',in_array($mode,['history','sms_no_mail'],true)?$hashes[$customer]:null]);
             $this->db->Execute('INSERT INTO lnp_history(created_at,customerid,action,result,details,userid) VALUES(?,0,?,?,?,?)',[time(),'bulk_notify','confirmed','Potwierdzono ręczną wysyłkę'.($mode==='history'?' z osobnymi historiami płatności':'').' #'.$id.' do '.count($ids).' klientów.',$this->user]);
             $this->db->CommitTrans();return $id;
         }catch(Throwable $e){$this->db->RollbackTrans();throw $e;}

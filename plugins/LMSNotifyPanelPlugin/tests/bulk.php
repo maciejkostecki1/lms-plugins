@@ -49,4 +49,5 @@ echo "PASS manual countdown defaults off and survives confirmed history job proc
 $id=$bulk->start([15],2,'plain',[],true);$bulk->process($id);if($fake->countdownCalls[15]!==true)throw new RuntimeException('Plain bulk countdown selection lost');
 echo "PASS explicit countdown for plain bulk job.\n";
 
-$id=$bulk->start([21],2,'sms_no_mail');$bulk->process($id);if($bulk->status($id)['mode']!=='sms_no_mail' || !in_array(21,$fake->calls,true))throw new RuntimeException('SMS mode lost');echo 'PASS SMS mode survives confirmed queue processing'.PHP_EOL;
+$id=$bulk->start([21],2,'sms_no_mail',[21=>hash('sha256','sms-preview')]);$bulk->process($id);if($bulk->status($id)['mode']!=='sms_no_mail' || !in_array(21,$fake->calls,true))throw new RuntimeException('SMS mode lost');echo 'PASS SMS mode survives confirmed queue processing'.PHP_EOL;
+try{$bulk->start([22],2,'sms_no_mail');throw new LogicException('SMS without preview accepted');}catch(RuntimeException $e){}

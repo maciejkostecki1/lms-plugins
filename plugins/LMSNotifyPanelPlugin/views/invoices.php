@@ -1,5 +1,5 @@
 <div class="lms-ui-box-container lnp-section"><h3 class="lms-ui-box-header">Powiadomienia o fakturach bieżących</h3>
-<?php if($tab==='settings'): ?>
+<?php if($tab==='invoices'): ?>
 <div class="lms-ui-box-container lnp-section lnp-schedule"><h3 class="lms-ui-box-header">Wspólna godzina wysyłki</h3>
 
 <form method="post"><input type="hidden" name="csrf" value="<?= $e($_SESSION['lnp_csrf']) ?>"><input type="hidden" name="op" value="invoice_schedule">

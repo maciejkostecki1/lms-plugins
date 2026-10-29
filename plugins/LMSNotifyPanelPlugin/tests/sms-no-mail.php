@@ -26,6 +26,7 @@ try {
     ConfigHelper::getConfig('finances.suspension_percentage',0);
     $DB->Execute('CREATE TEMP TABLE uiconfig(section text,var text,value text,disabled integer,userid integer,divisionid integer)');
     $DB->Execute("INSERT INTO uiconfig VALUES('finances','suspension_percentage','0',0,NULL,NULL)");
+    $DB->Execute("CREATE TEMP TABLE lnp_sms_delivery(itemid integer PRIMARY KEY,idx varchar(64),number varchar(11),externalid varchar(32),gateway_status varchar(20) DEFAULT 'SUBMITTING',updated_at bigint,report_at bigint DEFAULT 0)");
     $DB->Execute('CREATE TEMP TABLE messageitems(id integer,status integer,lastdate bigint,error text,externalmsgid text)');
     $DB->Execute("INSERT INTO customers VALUES(1,'Test','Klient',3,0,0,1,1)");
     $DB->Execute('INSERT INTO nodes VALUES(11,1,1),(12,1,0)');
@@ -56,18 +57,32 @@ try {
     function must($ok,$name){if(!$ok)throw new RuntimeException($name);echo 'PASS '.$name.PHP_EOL;}
     $DB->Execute('UPDATE customers SET divisionid=1 WHERE id=1');
     $DB->Execute('INSERT INTO customercontacts VALUES(?,?,?)',[1,'48600000000',CONTACT_MOBILE|CONTACT_NOTIFICATIONS]);
-    $r=$np->act(1,'notify_sms_no_mail',$s['revision']);must($api->deliveries===0 && strpos($r,'klient ma wpisany')!==false,'email owner excluded at execution');
+    $api->balance=-199.99;
+    foreach(['notify_sms','notify_sms_no_mail'] as $action){try{$np->act(1,$action,$s['revision']);throw new LogicException('Below-threshold SMS accepted');}catch(RuntimeException $e){must($api->deliveries===0,'SMS below 200 percent rejected before send: '.$action);}}
+    $api->balance=-200;
+    $r=$np->act(1,'notify_sms_no_mail',$s['revision'],$np->smsPreviewHash($np->inspect(1),$s));must($api->deliveries===0 && strpos($r,'klient ma wpisany')!==false,'email owner excluded at execution');
     $DB->Execute('UPDATE customercontacts SET contact=?,type=? WHERE contact=?',['invalid-email',CONTACT_EMAIL|CONTACT_DISABLED,'test@example.invalid']);
     must($np->hasEmailContact(1),'disabled invalid but nonempty email conservatively excluded');
     $DB->Execute('DELETE FROM customercontacts WHERE (type & ?)=?',[CONTACT_EMAIL,CONTACT_EMAIL]);
-    $r=$np->act(1,'notify_sms_no_mail',$s['revision']);must($api->deliveries===1 && strpos($r,'Kanały przyjęte')===0,'manual SMS-only send uses its own channel despite mail settings');
-    $r=$np->act(1,'notify_sms_no_mail',$s['revision']);must($api->deliveries===1,'SMS repeat interval prevents duplicate');
+    $hash=$np->smsPreviewHash($np->inspect(1),$s);
+    $DB->Execute('UPDATE customercontacts SET contact=? WHERE contact=?',['48600000001','48600000000']);
+    try{$np->act(1,'notify_sms_no_mail',$s['revision'],$hash);throw new LogicException('Changed recipient accepted');}catch(RuntimeException $e){must($api->deliveries===0,'recipient changed after preview prevents delivery');}
+    $DB->Execute('UPDATE customercontacts SET contact=? WHERE contact=?',['48600000000','48600000001']);
+    $r=$np->act(1,'notify_sms_no_mail',$s['revision'],$np->smsPreviewHash($np->inspect(1),$s));must($api->deliveries===1 && strpos($r,'Kanały przyjęte')===0,'manual SMS-only send uses its own channel despite mail settings');
+    $r=$np->act(1,'notify_sms_no_mail',$s['revision'],$np->smsPreviewHash($np->inspect(1),$s));must($api->deliveries===1,'SMS repeat interval prevents duplicate');
     $DB->Execute('DELETE FROM lnp_history');
     $DB->Execute('INSERT INTO customercontacts VALUES(?,?,?)',[1,'new@example.invalid',CONTACT_EMAIL]);
-    $r=$np->act(1,'notify_sms_no_mail',$s['revision']);must($api->deliveries===1,'email added after preview prevents send');
+    $r=$np->act(1,'notify_sms_no_mail',$s['revision'],$np->smsPreviewHash($np->inspect(1),$s));must($api->deliveries===1,'email added after preview prevents send');
     $DB->Execute('DELETE FROM customercontacts WHERE (type & ?)=?',[CONTACT_EMAIL,CONTACT_EMAIL]);
     $DB->Execute('UPDATE customers SET smsnotice=0 WHERE id=1');
-    $r=$np->act(1,'notify_sms_no_mail',$s['revision']);must($api->deliveries===1,'SMS consent respected');
+    $r=$np->act(1,'notify_sms_no_mail',$s['revision'],$np->smsPreviewHash($np->inspect(1),$s));must($api->deliveries===1,'SMS consent respected');
     try{$np->act(1,'notify_sms_no_mail',$s['revision'],null,true);throw new LogicException('Automatic accepted');}catch(RuntimeException $e){must($api->deliveries===1,'automatic mode cannot invoke manual SMS');}
+    $DB->Execute('UPDATE customers SET smsnotice=1 WHERE id=1');
+    $DB->Execute('INSERT INTO customercontacts VALUES(?,?,?)',[1,'new@example.invalid',CONTACT_EMAIL]);
+    $DB->Execute('DELETE FROM lnp_history');$DB->Execute('DELETE FROM lnp_sms_delivery');
+    $hash=$np->smsPreviewHash($np->inspect(1),$s);
+    $r=$np->act(1,'notify_sms',$s['revision'],$hash,false,true);
+    must($api->deliveries===2,'customer card SMS works independently of email contact');
+    must($DB->GetOne('SELECT origin FROM lnp_block_notices WHERE customerid=1')==='manual','shared customer card checkbox starts existing manual countdown');
     echo 'No external deliveries; temporary tables only.'.PHP_EOL;
 }finally{$DB->RollbackTrans();}

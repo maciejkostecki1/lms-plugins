@@ -29,7 +29,7 @@ try {
     if (($_SERVER['REQUEST_METHOD']??'GET')==='POST') {
         if (!is_string($_POST['csrf']??null) || !hash_equals($_SESSION['lnp_csrf'],$_POST['csrf'])) throw new RuntimeException('Sesja wygasła. Odśwież panel.');
         $op=$_POST['op']??'';
-        $tab=in_array($op,['invoice_settings','invoice_schedule','smsapi_settings','smsapi_test'],true)?'settings':($op==='settings'?'settings':($op==='exception'?'exceptions':'customers'));
+        $tab=in_array($op,['invoice_settings','invoice_schedule'],true)?'invoices':(in_array($op,['settings','smsapi_settings','smsapi_test'],true)?'settings':($op==='exception'?'exceptions':'customers'));
         if($op==='bulk_process'){
             $result=$bulk->process((int)($_POST['jobid']??0));
             header('Content-Type: application/json; charset=UTF-8');echo json_encode($result,JSON_THROW_ON_ERROR);exit;
@@ -47,9 +47,11 @@ try {
             echo $attachment['data'];exit;
         } elseif(in_array($op,['bulk_preview','bulk_history_preview','bulk_sms_preview'],true)){
             $historyMode=$op==='bulk_history_preview';$smsMode=$op==='bulk_sms_preview';$previewSettings=$settings;
+            if($smsMode && (!$smsSettings['enabled'] || !$smsSettings['allow_manual_sms']))throw new RuntimeException('Ręczna wysyłka SMS jest wyłączona.');
             $previewSettings['channels']=$smsMode?['sms']:['mail'];
             if($historyMode)$previewSettings['channels']=['mail'];
             $bulkPreview=$np->manualPreview($previewSettings,$smsMode);$token=bin2hex(random_bytes(24));$hashes=[];
+            if($smsMode)$bulkPreview['sms_estimate']=$np->smsEstimate($bulkPreview['rows'],$smsSettings);
             $bulkPreview['mode']=$historyMode?'history':($smsMode?'sms_no_mail':'plain');
             $bulkPreview['start_countdown']=!empty($_POST['start_countdown']) && (int)$settings['block_after_days']>0;
             if($historyMode)foreach($bulkPreview['rows'] as &$row){
@@ -58,6 +60,7 @@ try {
                 $row['attachment_name']=$attachment['filename'];$row['attachment_count']=$attachment['count'];
             }
             unset($row);
+            if($smsMode)foreach($bulkPreview['rows'] as $row)$hashes[(int)$row['id']]=$row['sms_hash'];
             $_SESSION['lnp_bulk_confirm']=['token'=>$token,'ids'=>array_map('intval',array_column($bulkPreview['rows'],'id')),'revision'=>$settings['revision'],'expires'=>time()+600,'mode'=>$bulkPreview['mode'],'hashes'=>$hashes,'start_countdown'=>$bulkPreview['start_countdown']];
             $bulkPreview['token']=$token;
             if($bulkPreview['rows'])$bulkPreview['message']=$np->messagePreview($bulkPreview['rows'][0],$previewSettings);
@@ -68,7 +71,7 @@ try {
             $jobid=$bulk->start($draft['ids'],$draft['revision'],$draft['mode']??'plain',$draft['hashes']??[],!empty($draft['start_countdown']));$_SESSION['lnp_bulk_auto']=$jobid;
             header('Location: ?m=notifypanel&bulkjob='.$jobid);exit;
         } elseif($op==='smsapi_settings'){
-            (new NotifySmsSettings($DB))->save($_POST,(int)Auth::GetCurrentUser());$notice='Zapisano ustawienia SMSAPI. Automatyczne SMS-y są wyłączone.';
+            (new NotifySmsSettings($DB))->save($_POST,(int)Auth::GetCurrentUser());$notice='Zapisano ustawienia SMSAPI.';
         } elseif($op==='smsapi_test'){
             $notice=(new NotifySmsSettings($DB))->test();
         } elseif ($op==='settings') {
@@ -90,19 +93,26 @@ try {
             if(($_POST['return_tab']??'')==='customers')$tab='customers';
         } elseif($op==='preview') {
             $action=(string)($_POST['action']??'');
-            if (!in_array($action,['notify','notify_manual','notify_history','notify_sms_no_mail','block','unblock'],true)) throw new RuntimeException('Nie rozpoznano działania przycisku. Odśwież listę i spróbuj ponownie.');
+            if (!in_array($action,['notify','notify_manual','notify_history','notify_sms_no_mail','notify_sms','block','unblock'],true)) throw new RuntimeException('Nie rozpoznano działania przycisku. Odśwież listę i spróbuj ponownie.');
             $c=$np->inspect((int)($_POST['customerid']??0));
             if (!$c) throw new RuntimeException('Brak aktywnego klienta.');
             $token=bin2hex(random_bytes(24));
             $_SESSION['lnp_confirm']=array('token'=>$token,'id'=>(int)$c['id'],'action'=>$action,
-                'revision'=>$settings['revision'],'expires'=>time()+600);
-            $preview=['customer'=>$c,'action'=>$action,'token'=>$token];
+                'revision'=>$settings['revision'],'expires'=>time()+600,'start_countdown'=>!empty($_POST['start_countdown']) && (int)$settings['block_after_days']>0);
+            $preview=['customer'=>$c,'action'=>$action,'token'=>$token,'start_countdown'=>$_SESSION['lnp_confirm']['start_countdown']];
             if($action==='block')$preview['block_notice']=$np->blockNoticeStatus($c,$settings);
-            if(in_array($action,['notify','notify_manual','notify_history','notify_sms_no_mail'],true)){
-                $messageSettings=$settings;$messageSettings['channels']=$action==='notify_sms_no_mail'?['sms']:['mail'];
+            if(in_array($action,['notify','notify_manual','notify_history','notify_sms_no_mail','notify_sms'],true)){
+                if(!NotifyPolicy::notificationDue($c,$settings))throw new RuntimeException('Zadłużenie po terminie jest poniżej progu powiadomienia '.$settings['notify_percent'].'%. Próg obowiązuje także ręczne SMS-y i e-maile.');
+                $messageSettings=$settings;$messageSettings['channels']=in_array($action,['notify_sms_no_mail','notify_sms'],true)?['sms']:['mail'];
                 if($action==='notify_sms_no_mail' && $np->hasEmailContact((int)$c['id']))throw new RuntimeException('Klient ma wpisany adres e-mail.');
+                if(in_array($action,['notify_sms_no_mail','notify_sms'],true) && (!$smsSettings['enabled'] || !$smsSettings['allow_manual_sms']))throw new RuntimeException('Ręczna wysyłka SMS jest wyłączona.');
                 if(!$np->notificationTargets($c,$messageSettings))throw new RuntimeException('Brak właściwego kontaktu, zgody lub wymagany odstęp od ostatniej wysyłki.');
                 $preview=array_merge($preview,$np->messagePreview($c,$messageSettings));
+                if(in_array($action,['notify_sms_no_mail','notify_sms'],true)){
+                    $_SESSION['lnp_confirm']['history_hash']=$np->smsPreviewHash($c,$messageSettings);
+                    $preview['recipients']=$np->notificationTargets($c,$messageSettings)['sms'];
+                    $preview['sms_estimate']=$np->smsEstimate([['sms_body'=>$preview['sms_body'],'sms_recipients'=>$preview['recipients']]],$smsSettings);
+                }
             }
             if($action==='notify_history'){
                 $preview['attachment']=NotifyPaymentHistory::build($DB,$c);
@@ -115,9 +125,9 @@ try {
             $draft=$_SESSION['lnp_confirm']??null;
             unset($_SESSION['lnp_confirm']);
             if (!$draft || !is_string($_POST['token']??null) || !hash_equals($draft['token'],$_POST['token']) || $draft['expires']<time()) throw new RuntimeException('Podgląd wygasł lub został już wykorzystany.');
-            $notice=$np->act($draft['id'],$draft['action'],$draft['revision'],$draft['history_hash']??null);
+            $notice=$np->act($draft['id'],$draft['action'],$draft['revision'],$draft['history_hash']??null,false,!empty($draft['start_countdown']));
         } else throw new RuntimeException('Nieznana operacja.');
-        if(!in_array($op,['preview','bulk_preview','bulk_history_preview'],true)) {
+        if(!in_array($op,['preview','bulk_preview','bulk_history_preview','bulk_sms_preview'],true)) {
             unset($_SESSION['lnp_list']);
             $_SESSION['lnp_flash']=$notice;
             $redirect=['m'=>'notifypanel','tab'=>$tab];
@@ -137,20 +147,20 @@ try {
     }
     if($tab==='customers') {
         $bulkJobs=$bulk->recent();
-        if($search)$allRows=array_values(array_filter([$np->inspect($search)]));
-        else {
-            $cached=$_SESSION['lnp_list']??null;
-            if(!$cached || ($cached['fees_version']??0)!==7 || $cached['revision']!==$settings['revision'] || $cached['time']<time()-60 || isset($_GET['refresh'])) {
-                $cached=['fees_version'=>7,'revision'=>$settings['revision'],'time'=>time(),'rows'=>$np->customerSnapshot()];
-                $_SESSION['lnp_list']=$cached;
-            }
-            $allRows=$cached['rows'];$snapshotTime=$cached['time'];
+        $cached=$_SESSION['lnp_list']??null;
+        if(!$cached || ($cached['fees_version']??0)!==10 || $cached['revision']!==$settings['revision'] || ($cached['sms_revision']??-1)!==$smsSettings['revision'] || $cached['time']<time()-60 || isset($_GET['refresh'])) {
+            $globalRows=$np->customerSnapshot();
+            $cached=['fees_version'=>10,'revision'=>$settings['revision'],'sms_revision'=>$smsSettings['revision'],'time'=>time(),
+                'rows'=>$globalRows,'statistics'=>$np->customerStatistics($globalRows,$settings,$smsSettings)];
+            $_SESSION['lnp_list']=$cached;
         }
+        $statistics=$cached['statistics'];$snapshotTime=$cached['time'];
+        $allRows=$search?array_values(array_filter([$np->inspect($search)])):$cached['rows'];
         $pagination=NotifyList::page($allRows,$sort,$direction,$page);
         $rows=$np->customerListDetails($pagination['rows']);
-    } elseif($tab==='history')$history=$np->historyList();
+    } elseif($tab==='history'){$history=$np->historyList();$smsHistory=(new NotifySmsDelivery($DB))->history();}
     elseif($tab==='exceptions')$exceptions=$np->exceptionList();
-    elseif(in_array($tab,['invoices','settings'],true)){
+    elseif($tab==='invoices'){
         $invoiceProfiles=(new NotifyInvoiceSettings($DB,(int)Auth::GetCurrentUser()))->profiles();
         $invoiceSendTime=(new NotifyInvoiceSchedule($DB))->time();
         if($tab==='invoices')$currentInvoices=array_values(array_filter(NotifyCurrentInvoice::load($DB,time()),static fn($i)=>(float)$i['unpaid']>0.009 && empty($i['closed'])));
@@ -160,7 +170,9 @@ try {
         http_response_code(400);header('Content-Type: application/json; charset=UTF-8');echo json_encode(['error'=>$ex->getMessage()]);exit;
     }
     $error=$ex instanceof PDOException?'Nie udało się odczytać danych wtyczki. Sprawdź instalację i dziennik serwera.':$ex->getMessage();
-    error_log('[NotifyPanel] '.get_class($ex).': '.$ex->getMessage());
+    // Configuration failures must never echo driver diagnostics containing bound credentials.
+    if(($_POST['op']??'')==='smsapi_settings')$error='Nie udało się zapisać ustawień SMSAPI. Sprawdź pola i odśwież panel.';
+    error_log('[NotifyPanel] '.get_class($ex).': operation failed');
 }
 $customerSelector='';
 if(in_array($tab,['customers','exceptions'],true)){

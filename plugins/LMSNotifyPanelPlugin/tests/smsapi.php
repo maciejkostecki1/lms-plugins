@@ -16,6 +16,18 @@ checkSms($called===1 && $r['status']===MSG_NEW && $r['id']==='test-id','queued S
 checkSms($params['to']==='48500000000' && $params['max_parts']===1 && $params['check_idx']===1,'normalization, single-part cost cap and deduplication');
 $idx=$params['idx'];NotifySmsApi::send('48500000000','Test','123',$options,$transport);
 checkSms($params['idx']===$idx,'stable deduplication key for same LMS item');
+$before=$called;
+NotifySmsApi::send('48500000000','Test '.str_repeat('a',161),'length',$options,$transport);
+NotifySmsApi::send('48abc500000000','Test','invalid',$options,$transport);
+checkSms($before===$called,'oversized message and letters in number rejected before network');
+checkSms(NotifySmsApi::normalizeNumber('500 000 000')==='48500000000','local Polish number normalized');
+$custom=str_repeat('a',64);NotifySmsApi::send('48500000000','Test','custom',$options+['idx'=>$custom],$transport);
+checkSms($params['idx']===$custom,'durable callback and deduplication key forwarded');
+$url='https://net-24h.pl/smsapi-reports/receive.php';
+NotifySmsApi::send('48500000000','Test','callback',$options+['notify_url'=>$url,'dry_run'=>true],$transport);
+checkSms($params['notify_url']===$url && $params['test']===1,'per-message callback configured even in no-send API validation');
+$before=$called;NotifySmsApi::send('48500000000','Test','callback-invalid',$options+['notify_url'=>'http://example.invalid/receiver.php'],$transport);
+checkSms($called===$before,'non-HTTPS callback rejected before network');
 foreach(['ACCEPTED'=>MSG_NEW,'SENT'=>MSG_SENT,'DELIVERED'=>MSG_DELIVERED,'FAILED'=>MSG_ERROR] as $state=>$status){
  $r=NotifySmsApi::send('48500000000','Test','123',$options,static fn()=>['http'=>200,'body'=>json_encode(['list'=>[['id'=>'x','status'=>$state]]])]);
  checkSms($r['status']===$status,'gateway status '.$state);

@@ -13,7 +13,7 @@ $db=new class{
  }
 };
 $store=new NotifySmsSettings($db);$fake='secret-for-unit-tests-only';
-$store->save(['revision'=>0,'enabled'=>true,'allow_manual_sms'=>true,'allow_customer_sms'=>true,'sender'=>'NET-24H','test_number'=>'600000000','token'=>$fake],1);
+$store->save(['revision'=>0,'enabled'=>true,'allow_manual_sms'=>true,'sender'=>'NET-24H','test_number'=>'600000000','token'=>$fake],1);
 $s=$store->settings();
 if(!$s['has_token'] || isset($s['token']) || strpos(json_encode($s),$fake)!==false || $s['allow_customer_sms'] || $s['test_number']!=='48600000000')throw new RuntimeException('Unsafe public settings');
 $store->save(['revision'=>1,'enabled'=>true,'sender'=>'NET-24H','token'=>''],1);
@@ -23,4 +23,6 @@ if($store->send('48600000000','Never sent','x')['status']!==MSG_ERROR)throw new 
 if(strpos(json_encode($db->history),$fake)!==false)throw new RuntimeException('Secret logged');
 $store->save(['revision'=>2,'sender'=>'NET-24H','delete_token'=>true],1);
 if($store->settings()['has_token'])throw new RuntimeException('Token deletion failed');
+if(!NotifySmsSettings::validate(['sender'=>'NET-24H','allow_customer_sms'=>1])['allow_customer_sms'])throw new RuntimeException('Explicit automation setting lost');
+if(NotifySmsSettings::defaults()['allow_customer_sms'])throw new RuntimeException('Automation must default off');
 echo 'PASS plugin SMS settings, masked token, preservation/deletion, stale revision, disabled automation and secret-free audit'.PHP_EOL;
