@@ -1,4 +1,6 @@
 <?php
+if(PHP_SAPI!=='cli'){http_response_code(403);exit;}
+
 require_once __DIR__.'/../lib/NotifyBlockNotice.php';
 require_once __DIR__.'/../lib/NotifyPolicy.php';
 function noticeCheck($ok,$label){if(!$ok)throw new RuntimeException($label);echo 'PASS '.$label.PHP_EOL;}

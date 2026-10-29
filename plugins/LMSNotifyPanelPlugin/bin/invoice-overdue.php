@@ -15,6 +15,7 @@ try{
     if(isset($options['apply']) && empty($profile['enabled'])){echo "Automatyczna wysyłka profilu wyłączona w panelu. Nic nie wysłano.\n";exit;}
     if(isset($options['apply']) && !(new NotifyInvoiceSchedule($DB))->due(time()))exit(0);
     $db=new NotifyDb($DB);$AUTH=null;$SYSLOG=SYSLOG::getInstance();$LMS=new LMS($DB,$AUTH,$SYSLOG);
+    $run=function()use($DB,$db,$LMS,$section,$profile,$options){
     $now=time();$count=0;
     foreach(NotifyCurrentInvoice::load($DB,$now) as $i){
         if(!NotifyCurrentInvoice::eligible($i,(int)$profile['days'],$now))continue;
@@ -55,4 +56,8 @@ try{
         }finally{$db->GetOne('SELECT pg_advisory_unlock(762319,?)',[$id]);}
     }
     echo 'Liczba faktur: '.$count.(isset($options['apply'])?' (wysyłka).':' (podgląd, nic nie wysłano).').PHP_EOL;
+    return 0;
+    };
+    if(isset($options['apply']))exit((new NotifyInvoiceSchedule($DB))->reminderOnce(time(),$run,$section));
+    $run();
 }catch(Throwable $e){fwrite(STDERR,$e->getMessage().PHP_EOL);exit(1);}

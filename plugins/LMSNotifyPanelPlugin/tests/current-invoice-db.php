@@ -1,4 +1,6 @@
 <?php
+if(PHP_SAPI!=='cli'){http_response_code(403);exit;}
+
 // Every table below is temporary and shadows production only in this connection.
 $script_name='Current invoice isolated selection';$script_parameters=[];
 require getcwd().'/bin/script-options.php';

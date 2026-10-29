@@ -1,4 +1,6 @@
 <?php
+if(PHP_SAPI!=='cli'){http_response_code(403);exit;}
+
 $script_name='Isolated invoice clock tests';$script_parameters=[];
 require getcwd().'/bin/script-options.php';
 require_once __DIR__.'/../lib/NotifyInvoiceSchedule.php';
@@ -7,7 +9,7 @@ foreach(['24:00','8:00','08:60','08:00:00',"08:00\n",''] as $t)if(NotifyInvoiceS
 $tz=new DateTimeZone('Europe/Warsaw');
 foreach(['2026-07-15 08:00','2026-12-15 08:00'] as $t){
     $now=(new DateTimeImmutable($t,$tz))->getTimestamp();
-    if(!NotifyInvoiceSchedule::atTime('08:00',$now)||NotifyInvoiceSchedule::atTime('09:00',$now))throw new RuntimeException('Polish time mismatch');
+    if(!NotifyInvoiceSchedule::atTime('08:00',$now)||NotifyInvoiceSchedule::atTime('09:00',$now)||!NotifyInvoiceSchedule::atTime('08:00',$now+60))throw new RuntimeException('Polish time mismatch');
 }
 $db=new NotifyDb($DB);
 $db->Execute('CREATE TEMP TABLE uiconfig(id serial,section text,var text,value text,description text,disabled integer,userid integer,divisionid integer,configid integer)');
@@ -25,3 +27,12 @@ $failed=$now+172800;
 try{$s->reminderOnce($failed,static function(){throw new RuntimeException('Simulated interrupted sender');});}catch(RuntimeException $e){if($e->getMessage()!=='Simulated interrupted sender')throw $e;}
 $s->reminderOnce($failed,$fake);if($calls!==2)throw new RuntimeException('Interrupted day repeated');
 echo "PASS clock validation, summer/winter Polish time, save/update, one reminder run per day and interrupted-run protection. TEMP tables and fake sender only.\n";
+
+$calls=0;$fake=static function()use(&$calls){++$calls;return 0;};
+$s->reminderOnce($now,$fake,'notify-overdue');$s->reminderOnce($now+60,$fake,'notify-overdue');$s->reminderOnce($now,$fake,'notify-overdue-7');
+if($calls!==2)throw new RuntimeException('Profile catch-up repeated an already claimed day');
+$db->Execute('CREATE TEMP TABLE lnp_runtime(name varchar(64) PRIMARY KEY,value text)');
+$db->Execute('INSERT INTO lnp_runtime VALUES(?,?)',['invoice_catchup_from','20261023']);
+if($s->due($now+60))throw new RuntimeException('Deployment day must not trigger retroactive sending');
+if(!$s->due($now+86400+60))throw new RuntimeException('Following day catch-up missing');
+echo "PASS profile-specific daily claims and no retroactive deployment-day send.\n";

@@ -10,6 +10,14 @@ $db=new class {
     public array $gateway=['enabled'=>true,'allow_manual_sms'=>true,'segment_rate'=>'0.075321'];
     public array $notices=[];public int $revision=1;
     function GetAll($sql,$args=[]){
+        if(strpos($sql,'FROM customercontacts WHERE customerid IN')!==false){
+            $out=[];foreach($args[0] as $id){
+                foreach($this->GetCol('SELECT DISTINCT contact',[$id]) as $contact)$out[]=['customerid'=>$id,'contact'=>$contact,'type'=>CONTACT_MOBILE|CONTACT_NOTIFICATIONS];
+                if($id===2)$out[]=['customerid'=>$id,'contact'=>'fixture@example.invalid','type'=>CONTACT_EMAIL|CONTACT_NOTIFICATIONS];
+            }return $out;
+        }
+        if(strpos($sql,'SELECT DISTINCT customerid,action')!==false)return [['customerid'=>5,'action'=>'notify_sms'],['customerid'=>5,'action'=>'notify_mail']];
+        if(strpos($sql,'SELECT c.id,c.divisionid')!==false)return array_map(static fn($id)=>['id'=>$id,'divisionid'=>$id===7?999:1,'account'=>null],$args[0]);
         if(strpos($sql,'lnp_block_notices')!==false)return $this->notices;
         if(strpos($sql,'messageitems')!==false)return [['id'=>99,'status'=>2]];
         throw new LogicException('Unexpected query '.$sql);
@@ -39,7 +47,7 @@ for($id=1;$id<=66;++$id)$rows[]=['id'=>$id,'customername'=>'Fixture '.$id,'debt'
  'excluded'=>$id===3,'smsnotice'=>$id===8?0:1,'debt_cycle'=>'cycle'];
 $stats=$np->customerStatistics($rows,$s,$db->gateway);
 verify($stats['debtors']===65 && $stats['block']===1 && $stats['remaining']===64,'global debt counts across multiple pages, including exclusions and review');
-$thresholdRows=$rows;$thresholdRows[0]['percent']=300;$thresholdRows[2]['percent']=450;$thresholdRows[3]['percent']=700;
+$thresholdRows=$rows;$thresholdRows[0]['percent']=300;$thresholdRows[0]['debt']=300;$thresholdRows[2]['percent']=450;$thresholdRows[2]['debt']=450;$thresholdRows[3]['percent']=700;$thresholdRows[3]['debt']=700;
 $thresholdStats=$np->customerStatistics($thresholdRows,$s,$db->gateway);
 verify($thresholdStats['block_threshold']===3 && $thresholdStats['threshold_held']===2 && $thresholdStats['below_block_threshold']===62,'threshold count separate from warning readiness, including excluded and review flags');
 verify($stats['sms']['customers']===58 && $stats['sms']['numbers']===59 && $stats['sms']['segments']===59,'SMS eligibility: email, exception, review, cooldown, invalid number, unsupported company, consent, normalized duplicates and multiple numbers');
@@ -77,3 +85,6 @@ $notifyRows[1]['debt']=200;$notifyRows[1]['percent']=200;
 $notifyRows[2]['debt']=199.99;$notifyRows[2]['percent']=200;
 $notifyStats=$np->customerStatistics($notifyRows,NotifyPolicy::defaults(),['enabled'=>false]);
 verify($notifyStats['notify_threshold']===63 && $notifyStats['debtors']===65,'notification counter uses exact threshold while unfiltered debt count stays unchanged');
+
+$edge=array_merge(NotifyPolicy::decision(-999.98,[['currency'=>'PLN','sum'=>333.33]],NotifyPolicy::defaults()),['id'=>70,'excluded'=>false,'debt_cycle'=>'edge']);
+verify($np->customerStatistics([$edge],NotifyPolicy::defaults(),['enabled'=>false])['block_threshold']===0,'rounded 300 percent cannot count a customer one grosz below block threshold');

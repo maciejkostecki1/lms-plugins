@@ -1,4 +1,6 @@
 <?php
+if(PHP_SAPI!=='cli'){http_response_code(403);exit;}
+
 define('CONTACT_DISABLED',1);define('CONTACT_NOTIFICATIONS',2);
 require_once __DIR__.'/../lib/NotifyCustomerDetails.php';
 foreach([
@@ -28,3 +30,7 @@ foreach([
     [[], 'Wysyłka SMS — brak potwierdzenia doręczenia'],
 ] as [$states,$expected])if(NotifyCustomerDetails::notificationStatus(['action'=>'notify_sms','result'=>'sent','sms_states'=>$states])!==$expected)throw new RuntimeException('SMS notification status mismatch');
 echo "PASS SMS delivery information independent of countdown.\n";
+
+$info=NotifyCustomerDetails::notificationInfo(['action'=>'notify_sms','result'=>'sent','created_at'=>100],[['gateway_status'=>'DELIVERED','report_at'=>250,'updated_at'=>300],['gateway_status'=>'DELIVERED','report_at'=>200,'updated_at'=>300]]);
+if($info['status']!=='Doręczono SMS' || $info['time']!==200)throw new RuntimeException('Delivery date must be first confirmed report, not send time');
+echo "PASS first actual delivery timestamp independent of send attempt.\n";

@@ -3,8 +3,9 @@ declare(strict_types=1);
 // No session or SMSAPI credential is exposed by this endpoint. Do not trust proxy headers.
 ini_set('display_errors','0');
 header('Cache-Control: no-store');header('Content-Type: text/plain; charset=UTF-8');
+require_once __DIR__.'/../lib/NotifySmsRelayProtocol.php';
 $ip=str_replace('::ffff:','',$_SERVER['REMOTE_ADDR']??'');
-if(!in_array($ip,['89.174.81.98','91.185.187.219','213.189.53.211','31.186.83.18','212.91.26.253'],true)){http_response_code(403);exit;}
+if(!in_array($ip,NotifySmsRelayProtocol::SOURCES,true)){http_response_code(403);exit;}
 // Provider validates a callback address before enabling delivery reports.
 if(empty($_GET) && empty($_POST)){echo 'OK';exit;}
 try{

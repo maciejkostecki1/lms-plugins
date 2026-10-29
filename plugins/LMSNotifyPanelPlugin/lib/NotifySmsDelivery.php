@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__.'/NotifyDb.php';
 require_once __DIR__.'/NotifySmsApi.php';
+require_once __DIR__.'/NotifySmsRelayProtocol.php';
 final class NotifySmsDelivery
 {
     private NotifyDb $db;
@@ -32,7 +33,7 @@ final class NotifySmsDelivery
             $count=$count??count($data[$key]);
             if(count($data[$key])!==$count || $count<1 || $count>5)throw new InvalidArgumentException('Nieprawidłowy raport.');
         }
-        $states=[401=>'NOT_FOUND',402=>'EXPIRED',403=>'SENT',404=>'DELIVERED',405=>'UNDELIVERED',406=>'FAILED',407=>'REJECTED',408=>'UNKNOWN',409=>'QUEUE',410=>'ACCEPTED',411=>'RENEWAL',412=>'STOP'];
+        $states=NotifySmsRelayProtocol::STATES;
         $reports=[];
         for($i=0;$i<$count;$i++){
             $code=$data['status'][$i];$date=$data['donedate'][$i];$number=NotifySmsApi::normalizeNumber($data['to'][$i]);
@@ -44,7 +45,7 @@ final class NotifySmsDelivery
     public function pendingNotice(array $c,int $event,array $items,string $origin): void
     {
         if(empty($c['debt_cycle']) || !in_array($origin,['manual','automatic'],true))return;
-        $this->db->Execute('INSERT INTO lnp_sms_notices(eventid,customerid,cycle_key,origin,items) VALUES(?,?,?,?,?) ON CONFLICT(eventid) DO NOTHING',[$event,(int)$c['id'],$c['debt_cycle'],$origin,json_encode($items,JSON_THROW_ON_ERROR)]);
+        $this->db->Execute('INSERT INTO lnp_sms_notices(eventid,customerid,cycle_key,origin,items) VALUES(?,?,?,?,?) ON CONFLICT(eventid) DO UPDATE SET items=EXCLUDED.items WHERE lnp_sms_notices.finished=0',[$event,(int)$c['id'],$c['debt_cycle'],$origin,json_encode($items,JSON_THROW_ON_ERROR)]);
     }
     public function reconcile(int $customer,$panel): void
     {
@@ -72,7 +73,10 @@ final class NotifySmsDelivery
                 if(!$row)throw new RuntimeException('Raport nie pasuje do zapisanej wysyłki.');
                 $lock=$this->db->GetOne('SELECT pg_try_advisory_xact_lock(762319,?)',[(int)$row['customerid']]);
                 if(!in_array($lock,[true,1,'1','t'],true))throw new RuntimeException('Operacja klienta trwa. Ponów raport.');
-                if($r['date']<(int)$row['report_at'] || $row['gateway_status']===$r['state'])continue;
+                if($r['date']<(int)$row['report_at'] || $row['gateway_status']===$r['state']){
+                    if($panel!==null)$this->reconcile((int)$row['customerid'],$panel);
+                    continue;
+                }
                 // A terminal delivery/failure must not regress on a delayed duplicate callback.
                 if(in_array($row['gateway_status'],['DELIVERED','EXPIRED','UNDELIVERED','FAILED','REJECTED','STOP'],true))continue;
                 if($row['gateway_status']==='SENT' && in_array($r['state'],['QUEUE','ACCEPTED','RENEWAL'],true))continue;
@@ -83,6 +87,22 @@ final class NotifySmsDelivery
             }
             $this->db->CommitTrans();
         }catch(Throwable $e){$this->db->RollbackTrans();throw $e;}
+    }
+    public function reconcilePending($panel,int $limit=25): int
+    {
+        $limit=max(1,min(100,$limit));$count=0;
+        // Rotate the bounded scan so a held customer cannot starve the queue.
+        $cursor=(int)($this->db->GetOne('SELECT value FROM lnp_runtime WHERE name=?',['sms_reconcile_cursor'])??0);
+        $ids=$this->db->GetCol('SELECT DISTINCT customerid FROM lnp_sms_notices WHERE finished=0 AND customerid>? ORDER BY customerid LIMIT '.$limit,[$cursor])?:[];
+        if(!$ids)$ids=$this->db->GetCol('SELECT DISTINCT customerid FROM lnp_sms_notices WHERE finished=0 ORDER BY customerid LIMIT '.$limit)?:[];
+        foreach($ids as $id){
+            $locked=$this->db->GetOne('SELECT pg_try_advisory_lock(762319,?)',[(int)$id]);
+            if(!in_array($locked,[true,1,'1','t'],true))continue;
+            try{$this->reconcile((int)$id,$panel);++$count;}
+            finally{$this->db->GetOne('SELECT pg_advisory_unlock(762319,?)',[(int)$id]);}
+        }
+        if($ids)$this->db->Execute('INSERT INTO lnp_runtime(name,value) VALUES(?,?) ON CONFLICT(name) DO UPDATE SET value=EXCLUDED.value',['sms_reconcile_cursor',(string)end($ids)]);
+        return $count;
     }
     public function history(): array
     {

@@ -23,6 +23,7 @@ try {
             $installDb->Execute(file_get_contents(__DIR__.'/../sql/upgrade-0.7.3.pgsql.sql'));
             $installDb->Execute(file_get_contents(__DIR__.'/../sql/upgrade-0.8.0.pgsql.sql'));
             $installDb->Execute(file_get_contents(__DIR__.'/../sql/upgrade-0.8.1.pgsql.sql'));
+            $installDb->Execute(file_get_contents(__DIR__.'/../sql/upgrade-0.8.6.pgsql.sql'));
             $installDb->CommitTrans();
         } catch(Throwable $e) { $installDb->RollbackTrans(); throw $e; }
         echo "Schemat wtyczki gotowy; ustawienia automatyki zachowano.\n"; exit;

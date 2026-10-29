@@ -1,4 +1,6 @@
 <?php
+if(PHP_SAPI!=='cli'){http_response_code(403);exit;}
+
 $script_name='Native LMS customer selector rendering';$script_parameters=[];
 require getcwd().'/bin/script-options.php';
 $smarty=new LMSSmarty();

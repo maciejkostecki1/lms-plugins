@@ -1,4 +1,4 @@
-# Płatności i blokady — LMSNotifyPanelPlugin 0.8.5
+# Płatności i blokady — LMSNotifyPanelPlugin 0.8.6
 
 Wtyczka do LMS+ obsługująca powiadomienia o zadłużeniu, osobne progi blokady internetu i zawieszenia naliczania, powiadomienia o bieżących fakturach oraz historię SMSAPI. Korzysta z mechanizmu wtyczek i metod LMS; nie wymaga edytowania plików źródłowych rdzenia ani wtyczki Huawei.
 
@@ -103,6 +103,20 @@ Test połączenia używa parametru `test=1` i nie wysyła SMS-a. Wysyłka ma lim
 Adres raportów HTTPS można podać w ustawieniach wtyczki; jest przekazywany do SMSAPI jako `notify_url` dla każdej nowej wiadomości i ma pierwszeństwo przed globalnym adresem konta. Nie zmienia to konfiguracji wcześniej wysłanych SMS-ów.
 
 Zalecany wariant dla prywatnego LMS to [oddzielny odbiornik i uwierzytelnione pobieranie](relay/README.md). Alternatywny `public/smsapi-status.php` wymaga bezpośredniej, poprawnie zabezpieczonej publicznej trasy do serwera LMS i konfiguracji właściwego pliku `lms.ini`. Nie udostępniaj całego panelu tylko w celu odbierania raportów.
+
+## Zmiany po audycie w 0.8.6
+
+- Każda ręczna wysyłka e-mail jest związana z adresami odbiorców, wyrenderowaną treścią, nadawcą i ewentualną historią. Zmiana po podglądzie wymaga nowego potwierdzenia, także w kolejce zbiorczej. Po aktualizacji przygotuj nowe podglądy; stare zadania z wcześniejszym formatem potwierdzenia nie będą wysyłać bez aktualnego odcisku.
+- Zlecenie odliczania SMS jest utrwalane przed wywołaniem bramki. Błąd drugiego numeru nie gubi wcześniejszej wysyłki. Kolektor cyklicznie sprawdza oczekujące zlecenia w ograniczonych porcjach, bez ponawiania SMS-ów.
+- Wyjątek, spłata, nowy cykl zadłużenia i wyłączone odliczanie nadal wstrzymują lub anulują licznik zgodnie z dotychczasowymi kontrolami. Po ustaniu przeszkody start następuje konserwatywnie w chwili ponownej weryfikacji, bez wstecznego skracania terminu i bez przesuwania już aktywnego licznika.
+- Przy „Doręczono SMS” podawana jest pierwsza data doręczenia danej wysyłki, a nie data rozpoczęcia próby. Bez daty raportu używany jest czas odpowiedzi API potwierdzającej doręczenie.
+- Licznik progu blokady porównuje kwoty w groszach. Nie zmieniono progów ani rozliczeń.
+- Szczegóły klientów, kontakty, kwalifikacja podglądu i historie do faktur są pobierane grupowo. Przy 50 klientach testowy odczyt szczegółów wymaga 6 zapytań, zamiast ponad 200.
+- Pominięta godzina faktur może być nadrobiona tego samego dnia. Osobny trwały rejestr profilu i dnia zapobiega ponowieniu niepewnej wysyłki. Nadrabianie zostaje aktywowane dopiero następnego dnia po pierwszej migracji 0.8.6, aby aktualizacja nie wywołała zaległych wysyłek.
+
+Uruchom standardowe `--upgrade-schema` przed uruchomieniem nowego kolektora i harmonogramów. Migracja dodaje wyłącznie tabelę stanu technicznego oraz indeksy wtyczki; nie zmienia ustawień finansowych. Przed aktualizacją zrób kopię plików i bazy oraz zakończ lub zatrzymaj starą kolejkę zbiorczą.
+
+Testy uruchamiaj w osobnej bazie testowej. Skrypty odrzucają HTTP, a fixture’y zastępują używane tabele sesyjnymi tabelami TEMP. Dla Nginx ogranicz dostęp WWW do plików wewnętrznych wtyczki, np. dopasowaniem `location ~ ^/plugins/LMSNotifyPanelPlugin/(tests|bin|sql|lib|handlers|views|modules|templates)/ { return 404; }`, dostosowanym do katalogu instalacji. Publiczny endpoint raportów pozostaje oddzielną trasą. Apache otrzymuje dodatkowe blokady w katalogach testów i SQL.
 
 ## Weryfikacja i ograniczenia
 

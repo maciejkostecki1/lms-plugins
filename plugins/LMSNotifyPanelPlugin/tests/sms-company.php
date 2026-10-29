@@ -1,4 +1,6 @@
 <?php
+if(PHP_SAPI!=='cli'){http_response_code(403);exit;}
+
 require_once __DIR__.'/../lib/NotifySmsCompany.php';
 foreach([1=>'Net-24h Maciej Kostecki',2=>'Meganecik'] as $id=>$signature){
  $text=NotifySmsCompany::message($id,7,285.40);

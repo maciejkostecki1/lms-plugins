@@ -35,13 +35,13 @@ try{
     $DB->Execute('INSERT INTO lnp_history VALUES(1),(2)');
     $DB->Execute('INSERT INTO messageitems(id,customerid,status) VALUES(3,2256,?),(4,2256,?),(5,2256,?)',[MSG_NEW,MSG_NEW,MSG_NEW]);
     $panel=new class {
-        public float $debt=100;
+        public float $debt=100;public bool $excluded=false;
         public function settings(){return ['block_after_days'=>7];}
-        public function inspect($id,$s){return ['id'=>$id,'debt'=>$this->debt,'debt_cycle'=>'test-cycle','state'=>'notify','excluded'=>false];}
+        public function inspect($id,$s){return ['id'=>$id,'debt'=>$this->debt,'debt_cycle'=>'test-cycle','state'=>'notify','excluded'=>$this->excluded];}
     };
     $delivery->pendingNotice($panel->inspect(2256,[]),1,[3,4],'manual');
     $keys=[];foreach([3,4,5] as $item){$keys[$item]=$delivery->begin($item,'48600000000');$delivery->accepted($item,['id'=>'queued'.$item,'gateway_status'=>'QUEUE']);}
-    $report=static fn($id)=>['id'=>'queued'.$id,'idx'=>$keys[$id],'number'=>'48600000000','state'=>'DELIVERED','date'=>time()];
+    $report=static function($id)use(&$keys){return ['id'=>'queued'.$id,'idx'=>$keys[$id],'number'=>'48600000000','state'=>'DELIVERED','date'=>time()];};
     $delivery->receive([$report(3)],$panel);
     deliveryCheck($DB->GetOne('SELECT origin FROM lnp_block_notices')==='manual','one delivered recipient starts countdown while second is queued');
     $first=$DB->GetOne('SELECT sent_at FROM lnp_block_notices');
@@ -55,5 +55,18 @@ try{
     deliveryCheck(!$DB->GetOne('SELECT 1 FROM lnp_block_notices'),'payment before delivery confirmation cancels countdown intent');
     $DB->Execute('DELETE FROM messageitems WHERE id=1');
     deliveryCheck(!$DB->GetOne('SELECT 1 FROM lnp_sms_delivery WHERE itemid=1'),'LMS message cleanup remains supported');
+    $DB->Execute('CREATE TEMP TABLE lnp_runtime(name varchar(64) PRIMARY KEY,value text)');
+    $DB->Execute('INSERT INTO lnp_history VALUES(3),(4)');
+    $DB->Execute('INSERT INTO messageitems(id,customerid,status) VALUES(6,2256,?),(7,2256,?)',[MSG_NEW,MSG_NEW]);
+    $panel->debt=100;$panel->excluded=true;
+    foreach([6,7] as $item){$keys[$item]=$delivery->begin($item,'48600000000');$delivery->accepted($item,['id'=>'queued'.$item,'gateway_status'=>'QUEUE']);}
+    $delivery->pendingNotice($panel->inspect(2256,[]),3,[6],'manual');$delivery->receive([$report(6)],$panel);
+    deliveryCheck(!$DB->GetOne('SELECT 1 FROM lnp_block_notices'),'exclusion still prevents countdown');
+    $panel->excluded=false;$delivery->receive([$report(6)],$panel);
+    deliveryCheck((bool)$DB->GetOne('SELECT 1 FROM lnp_block_notices'),'duplicate delivered report rechecks previously held intent');
+    $DB->Execute('DELETE FROM lnp_block_notices');$panel->excluded=true;
+    $delivery->pendingNotice($panel->inspect(2256,[]),4,[7],'manual');$delivery->receive([$report(7)],$panel);
+    $panel->excluded=false;$delivery->reconcilePending($panel,1);
+    deliveryCheck((bool)$DB->GetOne('SELECT 1 FROM lnp_block_notices'),'bounded collector recovers delivered intent without new callback');
     echo 'No external requests, temporary tables only.'.PHP_EOL;
 }finally{}

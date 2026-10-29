@@ -1,4 +1,6 @@
 <?php
+if(PHP_SAPI!=='cli'){http_response_code(403);exit;}
+
 if(!function_exists('f_round')){function f_round($v){return round((float)$v,2);}}
 require_once __DIR__.'/../lib/NotifySnapshot.php';
 $base=['netflag'=>0,'unitary_value'=>100,'unitary_netvalue'=>100,'pdiscount'=>10,'unitary_vdiscount'=>5,'count'=>2,'tax_value'=>23,'taxl_value'=>null];

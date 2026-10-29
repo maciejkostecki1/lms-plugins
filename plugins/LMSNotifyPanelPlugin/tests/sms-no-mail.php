@@ -9,6 +9,7 @@ $DB->BeginTrans();
 try {
     $schema=file_get_contents(__DIR__.'/../sql/install.pgsql.sql');
     $schema=preg_replace('/CREATE TABLE /','CREATE TEMP TABLE ',$schema);
+    $schema=str_replace('CREATE TEMP TABLE IF NOT EXISTS ','CREATE TEMP TABLE ',$schema);
     $schema=preg_replace('/CREATE INDEX .*?;/s','',$schema);
     $DB->Execute($schema);
     $DB->Execute('CREATE TEMP TABLE customers(id integer PRIMARY KEY,name text,lastname text,status integer,deleted integer,cutoffstop bigint,mailingnotice integer,smsnotice integer,divisionid integer DEFAULT 0,notes text DEFAULT \'\',info text DEFAULT \'\')');
@@ -27,6 +28,7 @@ try {
     $DB->Execute('CREATE TEMP TABLE uiconfig(section text,var text,value text,disabled integer,userid integer,divisionid integer)');
     $DB->Execute("INSERT INTO uiconfig VALUES('finances','suspension_percentage','0',0,NULL,NULL)");
     $DB->Execute("CREATE TEMP TABLE lnp_sms_delivery(itemid integer PRIMARY KEY,idx varchar(64),number varchar(11),externalid varchar(32),gateway_status varchar(20) DEFAULT 'SUBMITTING',updated_at bigint,report_at bigint DEFAULT 0)");
+    $DB->Execute('CREATE TEMP TABLE lnp_sms_notices(eventid bigint PRIMARY KEY,customerid integer,cycle_key varchar(64),origin varchar(16),items text,finished integer DEFAULT 0)');
     $DB->Execute('CREATE TEMP TABLE messageitems(id integer,status integer,lastdate bigint,error text,externalmsgid text)');
     $DB->Execute("INSERT INTO customers VALUES(1,'Test','Klient',3,0,0,1,1)");
     $DB->Execute('INSERT INTO nodes VALUES(11,1,1),(12,1,0)');
@@ -35,7 +37,7 @@ try {
     $DB->Execute('INSERT INTO assignments(customerid,liabilityid,period) VALUES(1,1,3),(1,2,0)');
     $DB->Execute('INSERT INTO assignments(customerid,liabilityid,period,suspended) VALUES(1,3,3,1)');
     $api=new class($DB) {
-        private $db; public $balance=-300; public $monthly=[['currency'=>'PLN','sum'=>100]]; public $deliveries=0; public $lastFiles=null; public $nodeFail=false;public $sendStatus=MSG_SENT;
+        private $db; public $balance=-300; public $monthly=[['currency'=>'PLN','sum'=>100]]; public $deliveries=0;public int $sequence=0;public bool $failSecond=false; public $lastFiles=null; public $nodeFail=false;public $sendStatus=MSG_SENT;
         public function __construct($db) {$this->db=$db;}
         public function getCustomerBalance($id,$time=null,$expired=false) { if($expired!==false) throw new RuntimeException('Must use total balance'); if((float)$this->db->GetOne('SELECT COALESCE(sum(value),0) FROM cash WHERE customerid=?',[$id])!== (float)$this->balance){$this->db->Execute('DELETE FROM cash WHERE customerid=?',[$id]); $this->db->Execute('INSERT INTO cash(customerid,value,docid,itemid) VALUES(?,?,1,1)',[$id,$this->balance]);} return $this->balance; }
         public function GetCustomerAssignments($id,$expired=false,$approved=true) {
@@ -47,13 +49,13 @@ try {
         public function NodeSet($id,$access) {if($this->nodeFail)throw new RuntimeException('Simulated node failure');$this->db->Execute('UPDATE nodes SET access=? WHERE id=?',[$access,$id]);}
         public function addMessage($p) {
             $contact=$p['recipients'][0]['email']??$p['recipients'][0]['phone'];
-            if(!in_array($contact,['test@example.invalid','48600000000'],true)) throw new RuntimeException('Disabled contact selected');
-            $this->db->Execute('INSERT INTO messageitems(id,status) VALUES(1,3)'); return ['id'=>99,'items'=>[1=>[$contact=>1]]];
+            if(!in_array($contact,['test@example.invalid','48600000000','48600000001'],true)) throw new RuntimeException('Disabled contact selected');
+            $id=++$this->sequence;$this->db->Execute('INSERT INTO messageitems(id,status) VALUES(?,3)',[$id]);return ['id'=>99+$id,'items'=>[1=>[$contact=>$id]]];
         }
-        public function SendSMS($number,$body,$item,$options=null) {++$this->deliveries;if(empty($options['lnp_manual']))throw new LogicException('Missing manual flag');return MSG_SENT;}
+        public function SendSMS($number,$body,$item,$options=null) {++$this->deliveries;if(empty($options['lnp_manual']))throw new LogicException('Missing manual flag');if($this->failSecond && $number==='48600000001')throw new RuntimeException('Simulated second number failure');return ['status'=>MSG_DELIVERED,'gateway_status'=>'DELIVERED','id'=>'fake'.$item];}
         public function SendMail($destination,$headers,$body,$files=null) {++$this->deliveries;$this->lastFiles=$files; return $this->sendStatus;}
     };
-    $np=new NotifyPanel($DB,$api,1);$s=$np->settings();
+    $np=new NotifyPanel($DB,$api,1);$s=$np->settings();$np->save(array_merge($s,['block_after_days'=>7]),$s['revision']);$s=$np->settings();
     function must($ok,$name){if(!$ok)throw new RuntimeException($name);echo 'PASS '.$name.PHP_EOL;}
     $DB->Execute('UPDATE customers SET divisionid=1 WHERE id=1');
     $DB->Execute('INSERT INTO customercontacts VALUES(?,?,?)',[1,'48600000000',CONTACT_MOBILE|CONTACT_NOTIFICATIONS]);
@@ -84,5 +86,13 @@ try {
     $r=$np->act(1,'notify_sms',$s['revision'],$hash,false,true);
     must($api->deliveries===2,'customer card SMS works independently of email contact');
     must($DB->GetOne('SELECT origin FROM lnp_block_notices WHERE customerid=1')==='manual','shared customer card checkbox starts existing manual countdown');
+    $DB->Execute('DELETE FROM lnp_history');$DB->Execute('DELETE FROM lnp_block_notices');$DB->Execute('DELETE FROM lnp_sms_notices');
+    $DB->Execute('INSERT INTO customercontacts VALUES(?,?,?)',[1,'48600000001',CONTACT_MOBILE|CONTACT_NOTIFICATIONS]);
+    $api->failSecond=true;$before=$api->deliveries;
+    try{$np->act(1,'notify_sms',$s['revision'],$np->smsPreviewHash($np->inspect(1),$s),false,true);throw new LogicException('Expected partial failure');}catch(RuntimeException $e){}
+    must((int)$DB->GetOne('SELECT count(*) FROM lnp_sms_notices')===1,'partial send persists countdown intent before external calls');
+    (new NotifySmsDelivery($DB))->reconcile(1,$np);
+    must($DB->GetOne('SELECT origin FROM lnp_block_notices WHERE customerid=1')==='manual','first delivered number recovers countdown after second exception');
+    must($api->deliveries===$before+2,'recovery never sends another SMS');
     echo 'No external deliveries; temporary tables only.'.PHP_EOL;
 }finally{$DB->RollbackTrans();}
