@@ -41,6 +41,16 @@ Ręczne i automatyczne powiadomienia o zadłużeniu to inny mechanizm niż osobn
 - „Powiadomienia o fakturach bieżących”: godzina wysyłki, przełączniki, szablony i lista faktur. Te formularze nie znajdują się w ogólnych ustawieniach wtyczki.
 - Historia SMS pokazuje nazwę klienta z linkiem do karty, numer odbiorcy, status i identyfikator operatora.
 
+## Powiadomienia w karcie klienta
+
+Panel w karcie klienta udostępnia przyciski **Powiadom mail**, **Powiadom z historią** i **Powiadom SMS** oraz wspólny checkbox **Odliczaj do blokady**. Wysyłka przechodzi przez podgląd i zatwierdzenie.
+
+Komunikat **„Doręczono powiadomienie SMS — co najmniej jeden numer”** informuje operatora o potwierdzonym doręczeniu także wtedy, gdy odliczanie nie zostało zaznaczone lub automatyczna blokada jest wyłączona. Sam komunikat nie uruchamia blokady. Do rozpoczęcia zaznaczonego odliczania wystarczy raport DELIVERED na jeden z numerów klienta.
+
+Poniższy zrzut z konta testowego został przekazany przez autora.
+
+![Płatności i blokady — przyciski powiadomień i potwierdzenie doręczenia SMS w karcie klienta](../../docs/screenshots/powiadomienia-karta-klienta.png)
+
 ## Pierwsza instalacja
 
 1. Wykonaj kopię bazy LMS, ustawień, harmonogramów i listy aktywnych wtyczek. Sprawdź pozostałe mechanizmy blokad w instalacji.
