@@ -1,12 +1,19 @@
 # Wtyczki LMS
 
-Repozytorium kodu trzech wtyczek pobranego z instalacji LMS 23 października 2026 r.
+Zestaw niezależnych wtyczek do LMS/LMS+: rozliczenia, powiadomienia, Huawei GPON DEMO RO i personalizacja wyglądu panelu.
 
 | Katalog | Wtyczka | Wersja |
 | --- | --- | --- |
 | `plugins/NET24KsefErstePlugin` | Eksport przelewów KSeF do Erste | Brak deklaracji wersji |
 | `plugins/LMSNotifyPanelPlugin` | Płatności i blokady | 0.8.0 |
 | `plugins/LMSGponHuaweiDemoPlugin` | Huawei GPON — DEMO RO | 1.1.0-demo-ro-lite |
+| `plugins/LMSThemeSwitcherPlugin` | Motywy LMS — kolory i układ panelu | 2.0.1 |
+
+## Motywy LMS
+
+12 gotowych motywów, własne kolory, wybór czcionki, trzy gęstości widoku, regulowana szerokość menu i przyklejone nagłówki tabel. Ustawienia są dostępne w **Konfiguracja → Motywy LMS** i zapisywane osobno dla operatora w przeglądarce. Wtyczka działa bez edycji kodu źródłowego LMS i nie wymaga migracji bazy.
+
+[Opis funkcji i instrukcja instalacji Motywów LMS](plugins/LMSThemeSwitcherPlugin/README.md).
 
 ## Instalacja
 
