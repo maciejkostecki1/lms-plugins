@@ -347,11 +347,12 @@ final class NotifyPanel
     }
     public function customerStatistics(array $rows,array $s,array $gateway): array
     {
-        $debtors=0;$block=0;$threshold=0;$thresholdHeld=0;
+        $debtors=0;$block=0;$threshold=0;$thresholdHeld=0;$notifyThreshold=0;
         $gates=(new NotifyBlockNotice($this->db))->statuses($rows,$s);
         foreach($rows as $c){
             if((float)$c['debt']<=0.009)continue;
             ++$debtors;
+            if(NotifyPolicy::notificationDue($c,$s))++$notifyThreshold;
             if($c['percent']!==null && (float)$c['percent']>=(int)$s['block_percent']){
                 ++$threshold;
                 if($c['excluded'] || $c['state']==='review')++$thresholdHeld;
@@ -360,7 +361,7 @@ final class NotifyPanel
         }
         $preview=['rows'=>[],'skipped'=>['message'=>0]];
         if(!empty($gateway['enabled']) && !empty($gateway['allow_manual_sms']))$preview=$this->manualPreview($s,true,$rows,false);
-        return ['debtors'=>$debtors,'block'=>$block,'remaining'=>$debtors-$block,
+        return ['notify_threshold'=>$notifyThreshold,'debtors'=>$debtors,'block'=>$block,'remaining'=>$debtors-$block,
             'block_threshold'=>$threshold,'threshold_held'=>$thresholdHeld,'below_block_threshold'=>$debtors-$threshold,
             'sms'=>$this->smsEstimate($preview['rows'],$gateway),'invalid_messages'=>$preview['skipped']['message']];
     }

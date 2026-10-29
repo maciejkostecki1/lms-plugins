@@ -1,5 +1,13 @@
 # Zmiany
 
+## 0.8.5 — 29.10.2026
+
+- Liczniki zadłużenia przeniesione do tabeli pod odpowiednimi progami.
+- Licznik zadłużonych abonamentowo do powiadomienia stosuje ustawiony próg, z porównaniem kwot w groszach.
+- Osobno pokazano wszystkich zadłużonych abonamentowo, pozostałych poniżej progu blokady oraz gotowych do blokady teraz.
+- Skrócone komunikaty o braku odliczania, doręczeniu SMS i wysłaniu maila z historią; daty pod komunikatami.
+- Zmiany nie modyfikują zasad blokowania ani rozliczeń.
+
 ## 0.8.4 — 29.10.2026
 
 - Raport DELIVERED na jeden numer wystarcza do uruchomienia zamówionego odliczania; drugi numer może oczekiwać lub zakończyć się błędem.

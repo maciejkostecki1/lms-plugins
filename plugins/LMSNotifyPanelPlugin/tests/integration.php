@@ -158,7 +158,7 @@ try {
     verify($api->deliveries===$before+1,'history notification respects mail consent');
     $DB->Execute('INSERT INTO lnp_history(created_at,customerid,action,result,details,userid) VALUES(?,1,?,?,?,0)',[time()+2,'notify_mail','sent','Załącznik: historia-platnosci-1.html; fixture only']);
     $details=$np->customerListDetails([$np->inspect(1)])[0];
-    verify($details['notification_status']==='Wysłano powiadomienie z historią','list shows latest history notification from temporary ledger');
+    verify($details['notification_status']==='Wysłano mail z historią','list shows latest history notification from temporary ledger');
     $DB->Execute('INSERT INTO lnp_history(created_at,customerid,action,result,details,userid) VALUES(?,1,?,?,?,0)',[time()+3,'notify_mail','pending','fixture only']);
     $details=$np->customerListDetails([$np->inspect(1)])[0];
     verify($details['notification_status']==='Wysyłka powiadomienia — wynik do sprawdzenia','newer uncertain attempt is not shown as sent');

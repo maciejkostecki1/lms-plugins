@@ -4,7 +4,7 @@ $url=static function(array $changes=[]) use($sort,$direction,$search) {return '?
 $labels=['block'=>'Do blokady','notify'=>'Do powiadomienia','ok'=>'Poniżej progów','review'=>'Do weryfikacji']; ?>
 <style>
 /* Layout only. Colours, typography, inputs, buttons and tables come from LMS. */
-.lnp .lnp-statistics{display:flex;flex-wrap:wrap;gap:.6em 1.5em;margin:.6em}.lnp .lnp-statistics b{font-size:1.2em}
+.lnp .lnp-statistics b{font-size:1.2em}.lnp .lnp-statistics p{margin:.4em 0}
 .lnp .lnp-section{margin:1em 0}.lnp .lnp-section>form,.lnp .lnp-section>p,.lnp .lnp-section>pre,.lnp .lnp-section>.scroll{margin:.6em}
 .lnp .settings-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.5em 1.5em;margin-bottom:1em}.lnp .settings-grid label{min-width:0}.lnp .settings-grid small{display:block;white-space:normal;overflow-wrap:anywhere;margin-top:.35em}.lnp .settings-grid input[type="number"]{width:8em}.lnp .settings-grid input[type="email"],.lnp .settings-grid input[maxlength]{width:100%}@media(max-width:800px){.lnp .settings-grid{grid-template-columns:1fr}}
 .lnp .scroll{overflow:auto}.lnp table{width:100%}.lnp .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:.5em 1em}
@@ -36,7 +36,22 @@ $labels=['block'=>'Do blokady','notify'=>'Do powiadomienia','ok'=>'Poniżej prog
 <table class="lmsbox lnp-summary"><thead><tr><th>Próg powiadomienia</th><th>Próg blokady internetu</th><th>Próg zawieszenia naliczania</th><th>Automatyka progów i blokad</th></tr></thead><tbody><tr>
 <td class="bold"><?= $e($settings['notify_percent']) ?>%</td><td class="bold"><?= $e($settings['block_percent']) ?>%</td><td class="bold"><?= $e($settings['suspend_percent']) ?>%</td>
 <td><?= ($settings['auto_notify']||$settings['auto_block']||$settings['auto_unblock'])?'Włączona':'Wyłączona' ?></td>
-</tr></tbody></table>
+</tr>
+<?php if($tab==='customers' && isset($statistics)): ?>
+<tr class="lnp-statistics" aria-label="Globalne statystyki zadłużenia">
+<td>
+<p>Zadłużeni abonamentowo do powiadomienia: <b><?= (int)($statistics['notify_threshold']??0) ?></b></p>
+<p>Zadłużeni abonamentowo bez progu: <b><?= (int)$statistics['debtors'] ?></b></p>
+<p>Pozostali zadłużeni: <b><?= (int)($statistics['below_block_threshold']??$statistics['remaining']) ?></b></p>
+</td>
+<td>
+<p>Klienci do zablokowania — próg <?= (int)$settings['block_percent'] ?>%: <b><?= (int)($statistics['block_threshold']??$statistics['block']) ?></b></p>
+<p>Gotowi do blokady teraz: <b><?= (int)$statistics['block'] ?></b></p>
+</td>
+<td></td><td></td>
+</tr>
+<?php endif ?>
+</tbody></table>
 <?php endif ?>
 
 <?php if($tab==='customers'): ?>
@@ -57,15 +72,9 @@ $labels=['block'=>'Do blokady','notify'=>'Do powiadomienia','ok'=>'Poniżej prog
 </div><?php endif ?>
 <div class="lms-ui-box-container lnp-section"><h3 class="lms-ui-box-header">Klienci</h3>
 <?php if(isset($statistics)): ?>
-<div class="lnp-statistics" role="status" aria-label="Globalne statystyki zadłużenia">
-<span>Zadłużeni abonamentowo: <b><?= (int)$statistics['debtors'] ?></b></span>
-<span>Do blokady — próg <?= (int)$settings['block_percent'] ?>%: <b><?= (int)($statistics['block_threshold']??$statistics['block']) ?></b></span>
-<span>Gotowi do blokady teraz: <b><?= (int)$statistics['block'] ?></b></span>
-<span>Pozostali zadłużeni: <b><?= (int)($statistics['below_block_threshold']??$statistics['remaining']) ?></b></span>
-<span>Odbiorcy SMS bez e-maila: <b><?= (int)$statistics['sms']['customers'] ?></b></span>
-</div>
+<p>Odbiorcy SMS bez e-maila: <b><?= (int)$statistics['sms']['customers'] ?></b></p>
 <?php $smsEstimate=$statistics['sms']; require __DIR__.'/sms-estimate.php'; ?>
-<details style="margin:.6em"><summary>Cała lista · zasady liczników</summary><p>Próg blokady: zadłużenie abonamentowe po terminie względem opłat miesięcznych. Wśród klientów ponad progiem wyjątek lub weryfikacja: <?= (int)($statistics['threshold_held']??0) ?>. Gotowi teraz: obecne warunki blokady, w tym termin ostrzeżenia i wyjątki; także już zablokowani spełniający reguły. W trybie czasowym gotowy może być również klient poniżej progu procentowego. SMS: zgody, numery i odstęp wysyłki; przy wyłączonej wysyłce ręcznej — 0. Nieprawidłowe treści: <?= (int)$statistics['invalid_messages'] ?>.</p></details>
+<details style="margin:.6em"><summary>Cała lista · zasady liczników</summary><p>Do powiadomienia: zadłużenie abonamentowe spełniające ustawiony próg powiadomienia; licznik nie pomija klientów z powodu zgody, kontaktu lub odstępu wysyłki. Bez progu: wszyscy z długiem abonamentowym. Pozostali zadłużeni: klienci z długiem abonamentowym poniżej progu blokady. Próg blokady: zadłużenie abonamentowe po terminie względem opłat miesięcznych. Wśród klientów ponad progiem wyjątek lub weryfikacja: <?= (int)($statistics['threshold_held']??0) ?>. Gotowi teraz: obecne warunki blokady, w tym termin ostrzeżenia i wyjątki; także już zablokowani spełniający reguły. W trybie czasowym gotowy może być również klient poniżej progu procentowego. SMS: zgody, numery i odstęp wysyłki; przy wyłączonej wysyłce ręcznej — 0. Nieprawidłowe treści: <?= (int)$statistics['invalid_messages'] ?>.</p></details>
 <?php endif ?>
 <form method="post"><input type="hidden" name="csrf" value="<?= $e($_SESSION['lnp_csrf']) ?>"><input type="hidden" name="op" value="bulk_preview"><button type="submit" class="lms-ui-button"><span class="lms-ui-label">Wyślij powiadomienie do wszystkich zadłużonych — e-mail</span></button> <label class="inline"><input type="checkbox" name="start_countdown" value="1" <?= (int)$settings['block_after_days']===0?'disabled':'' ?>> Uruchom odliczanie do blokady (niezależnie od automatycznej blokady)</label></form>
 <form method="post"><input type="hidden" name="csrf" value="<?= $e($_SESSION['lnp_csrf']) ?>"><input type="hidden" name="op" value="bulk_sms_preview"><button type="submit" class="lms-ui-button"><span class="lms-ui-label">Wyślij SMS do wszystkich zadłużonych bez e-maila</span></button> <label class="inline"><input type="checkbox" name="start_countdown" value="1" <?= (int)$settings['block_after_days']===0?'disabled':'' ?>> Uruchom odliczanie do blokady</label></form>
