@@ -3,7 +3,7 @@ if(PHP_SAPI!=='cli')exit(1);
 class ConfigHelper {public static function checkPrivilege($name){return true;}}
 class Auth {public static function GetCurrentUser(){return 1;}}
 require_once __DIR__.'/../handlers/NotifyCustomerActionsHandler.php';
-$DB=new class {public function GetRow($sql,$args=[]){return ['payload'=>'{}','revision'=>1,'token'=>''];}};
+$DB=new class {public function GetRow($sql,$args=[]){return strpos($sql,'lnp_history')!==false?null:['payload'=>'{}','revision'=>1,'token'=>''];}};
 $LMS=new stdClass();$smarty=new class {public $filter;public function registerFilter($type,$callback,$name){$this->filter=$callback;}};
 (new NotifyCustomerActionsHandler())->customer(['customerinfo'=>['id'=>2256],'smarty'=>$smarty]);
 if(!is_callable($smarty->filter) || empty($_SESSION['lnp_csrf']))throw new RuntimeException('Hook did not initialize card session and filter');

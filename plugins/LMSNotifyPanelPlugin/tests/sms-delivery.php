@@ -43,10 +43,11 @@ try{
     $keys=[];foreach([3,4,5] as $item){$keys[$item]=$delivery->begin($item,'48600000000');$delivery->accepted($item,['id'=>'queued'.$item,'gateway_status'=>'QUEUE']);}
     $report=static fn($id)=>['id'=>'queued'.$id,'idx'=>$keys[$id],'number'=>'48600000000','state'=>'DELIVERED','date'=>time()];
     $delivery->receive([$report(3)],$panel);
-    deliveryCheck(!$DB->GetOne('SELECT 1 FROM lnp_block_notices'),'one queued recipient prevents countdown');
+    deliveryCheck($DB->GetOne('SELECT origin FROM lnp_block_notices')==='manual','one delivered recipient starts countdown while second is queued');
+    $first=$DB->GetOne('SELECT sent_at FROM lnp_block_notices');
     $delivery->receive([$report(4)],$panel);
-    deliveryCheck($DB->GetOne('SELECT origin FROM lnp_block_notices')==='manual','all confirmed recipients start the requested manual countdown');
-    $first=$DB->GetOne('SELECT sent_at FROM lnp_block_notices');$delivery->receive([$report(4)],$panel);
+    deliveryCheck($DB->GetOne('SELECT origin FROM lnp_block_notices')==='manual','second delivery preserves the requested manual countdown');
+    deliveryCheck($DB->GetOne('SELECT sent_at FROM lnp_block_notices')===$first,'second number does not reset countdown');$delivery->receive([$report(4)],$panel);
     deliveryCheck($DB->GetOne('SELECT sent_at FROM lnp_block_notices')===$first,'duplicate delivery report preserves first countdown');
     $DB->Execute('DELETE FROM lnp_block_notices');
     $delivery->pendingNotice($panel->inspect(2256,[]),2,[5],'manual');$panel->debt=0;

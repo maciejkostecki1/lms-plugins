@@ -20,3 +20,11 @@ foreach([
     [[], ''],
 ] as [$event,$expected])if(NotifyCustomerDetails::notificationStatus($event)!==$expected)throw new RuntimeException('Notification status mismatch');
 echo "PASS ordinary/history/invoice send labels and no false sent label for pending or error.\n";
+
+foreach([
+    [['DELIVERED','EXPIRED'],'Doręczono powiadomienie SMS — co najmniej jeden numer'],
+    [['SENT','QUEUE'],'SMS wysłany lub w kolejce — oczekiwanie na doręczenie'],
+    [['EXPIRED','UNDELIVERED'],'Nie doręczono powiadomienia SMS'],
+    [[], 'Wysyłka SMS — brak potwierdzenia doręczenia'],
+] as [$states,$expected])if(NotifyCustomerDetails::notificationStatus(['action'=>'notify_sms','result'=>'sent','sms_states'=>$states])!==$expected)throw new RuntimeException('SMS notification status mismatch');
+echo "PASS SMS delivery information independent of countdown.\n";

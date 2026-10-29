@@ -8,6 +8,7 @@ try{
     $db->Execute('CREATE TEMP TABLE lnp_bulk_jobs(id integer)');
     $db->Execute(file_get_contents(__DIR__.'/../sql/upgrade-0.7.2.pgsql.sql'));
     $db->Execute(file_get_contents(__DIR__.'/../sql/upgrade-0.7.3.pgsql.sql'));
+    $db->Execute('CREATE TEMP TABLE lnp_sms_delivery(itemid integer,gateway_status text)');
     $db->Execute('CREATE TEMP TABLE messageitems(id integer PRIMARY KEY,status integer)');
     $db->Execute('INSERT INTO messageitems VALUES(1,2),(2,2)');
     $n=new NotifyBlockNotice($db);$c=['id'=>1,'debt_cycle'=>'10','debt'=>300];$s=['block_after_days'=>7];$now=time();

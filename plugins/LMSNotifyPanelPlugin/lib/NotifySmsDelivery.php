@@ -56,10 +56,10 @@ final class NotifySmsDelivery
             }
             if($c['excluded'] || $c['state']==='review' || (int)$s['block_after_days']===0)continue;
             $items=json_decode($intent['items'],true,512,JSON_THROW_ON_ERROR);if(!$items)continue;
-            $all=true;foreach($items as $item)if(!in_array((int)$this->db->GetOne('SELECT status FROM messageitems WHERE id=?',[(int)$item]),[MSG_SENT,MSG_DELIVERED],true))$all=false;
-            if(!$all)continue;
+            $delivered=[];foreach($items as $item)if((int)$this->db->GetOne('SELECT status FROM messageitems WHERE id=?',[(int)$item])===MSG_DELIVERED)$delivered[]=(int)$item;
+            if(!$delivered)continue;
             // Use the same existing warning rule, starting conservatively at confirmation time.
-            (new NotifyBlockNotice($this->db))->record($c,$s,(int)$intent['eventid'],$items,time(),$intent['origin']);
+            (new NotifyBlockNotice($this->db))->record($c,$s,(int)$intent['eventid'],$delivered,time(),$intent['origin']);
             $this->db->Execute('UPDATE lnp_sms_notices SET finished=1 WHERE eventid=?',[$intent['eventid']]);
         }
     }

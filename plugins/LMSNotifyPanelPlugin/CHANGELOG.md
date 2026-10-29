@@ -1,5 +1,13 @@
 # Zmiany
 
+## 0.8.4 — 29.10.2026
+
+- Raport DELIVERED na jeden numer wystarcza do uruchomienia zamówionego odliczania; drugi numer może oczekiwać lub zakończyć się błędem.
+- Status SENT nie jest traktowany jako doręczenie SMS.
+- Komunikat o doręczeniu na liście i w karcie klienta jest niezależny od odliczania i automatycznej blokady.
+- Kolejne raporty nie przesuwają początku licznika; zachowano progi, rozliczenia i reguły e-maili.
+- Testy regresji dla wielu numerów, statusów doręczenia i odliczania.
+
 ## 0.8.3 — 29.10.2026
 
 - Wspólny próg powiadomienia dla ręcznych SMS-ów i e-maili, pojedynczych i zbiorczych, także z historią płatności.

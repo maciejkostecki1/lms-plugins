@@ -1,4 +1,5 @@
 <table class="lmsbox lms-ui-tab-container" id="lnp-customer-notifications"><thead><tr><td>Powiadomienia o zadłużeniu</td></tr></thead><tbody><tr><td>
+<?php if(!empty($notification['status'])): ?><p><b><?= $e($notification['status']) ?></b><?php if(!empty($notification['time'])): ?> · <?= $e((new DateTimeImmutable('@'.$notification['time']))->setTimezone(new DateTimeZone('Europe/Warsaw'))->format('d.m.Y H:i')) ?><?php endif ?></p><?php endif ?>
 <form method="post" action="?m=notifypanel" id="lnp-customer-notify-form">
 <input type="hidden" name="csrf" value="<?= $e($csrf) ?>"><input type="hidden" name="op" value="preview"><input type="hidden" name="customerid" value="<?= (int)$customer ?>"><input type="hidden" name="action" id="lnp-card-action" value="notify_manual">
 <?php foreach(['notify_manual'=>'Powiadom mail','notify_history'=>'Powiadom z historią','notify_sms'=>'Powiadom SMS'] as $action=>$label): ?>

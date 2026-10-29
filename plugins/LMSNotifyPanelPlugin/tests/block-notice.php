@@ -28,3 +28,7 @@ $s['block_after_days']=7;
 noticeCheck(NotifyPolicy::internetBlockDue($c,$s,['ready'=>true]),'seven days replaces percentage threshold even for small remaining debt');
 noticeCheck(!NotifyPolicy::internetBlockDue($c,$s,['ready'=>false]),'seven days cannot block before deadline');
 $c['debt']=0;noticeCheck(!NotifyPolicy::internetBlockDue($c,$s,['ready'=>true]),'repayment prevents timed block');
+
+noticeCheck(NotifyBlockNotice::evaluate($notice,'10',300,7,$now,[1=>5,2=>3],[1=>'DELIVERED',2=>'EXPIRED'])['ready'],'one delivered SMS permits countdown despite second expired number');
+noticeCheck(!NotifyBlockNotice::evaluate($notice,'10',300,7,$now,[1=>2,2=>3],[1=>'SENT',2=>'EXPIRED'])['ready'],'SMS sent without delivery cannot start countdown');
+noticeCheck(NotifyBlockNotice::evaluate($notice,'10',300,7,$now,[1=>5,2=>1],[1=>'DELIVERED',2=>'QUEUE'])['ready'],'one delivered SMS permits countdown despite second queued number');

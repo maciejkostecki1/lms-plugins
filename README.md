@@ -5,7 +5,7 @@ Zestaw niezależnych wtyczek do LMS/LMS+: rozliczenia, powiadomienia, Huawei GPO
 | Katalog | Wtyczka | Wersja |
 | --- | --- | --- |
 | `plugins/NET24KsefErstePlugin` | Eksport przelewów KSeF do Erste | Brak deklaracji wersji |
-| `plugins/LMSNotifyPanelPlugin` | Płatności i blokady | 0.8.3 |
+| `plugins/LMSNotifyPanelPlugin` | Płatności i blokady | 0.8.4 |
 | `plugins/LMSGponHuaweiDemoPlugin` | Huawei GPON — DEMO RO | 1.1.0-demo-ro-lite |
 | `plugins/LMSThemeSwitcherPlugin` | Motywy LMS — kolory i układ panelu | 2.0.1 |
 
