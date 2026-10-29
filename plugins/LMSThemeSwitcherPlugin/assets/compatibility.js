@@ -14,6 +14,11 @@
     }
     function adapt(element) {
         if (!(element instanceof HTMLElement) || !element.closest(scope) || element.closest(excluded)) return;
+        const painted = rgb(element.style.backgroundColor || '');
+        // Saturated backgrounds are state signals, not decorative legacy panels.
+        if(painted && Math.max(...painted.slice(0,3))-Math.min(...painted.slice(0,3))>25){
+            element.removeAttribute('data-lms-ink');element.removeAttribute('data-lms-surface');return;
+        }
         const color = rgb(element.style.color || '');
         if (color && color[3] > .5) {
             const [r,g,b] = color;

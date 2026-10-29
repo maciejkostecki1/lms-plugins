@@ -5,6 +5,7 @@ class NET24KsefErstePlugin extends LMSPlugin
     const PLUGIN_DIRECTORY_NAME = 'NET24KsefErstePlugin';
     const PLUGIN_NAME = 'NET-24h KSeF ERSTE';
     const PLUGIN_DESCRIPTION = 'Eksport przelewow KSeF do ERSTE';
+    const PLUGIN_SOFTWARE_VERSION = '1.0.0';
     const PLUGIN_AUTHOR = 'NET-24h';
 
     public function registerHandlers()

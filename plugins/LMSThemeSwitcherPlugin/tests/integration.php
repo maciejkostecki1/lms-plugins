@@ -1,4 +1,6 @@
 <?php
+if(PHP_SAPI!=='cli'){http_response_code(403);exit;}
+
 class LMSPlugin { protected $handlers = array(); }
 class Smarty {
     public $filters = array();
@@ -18,7 +20,7 @@ check(isset($menu['config']['submenu']['existing']) && $menu['config']['submenu'
 $dirs = $handler->modulesInit(array('/existing/modules'));
 check($dirs[1] === '/existing/modules' && is_file($dirs[0] . '/lmstheme.php'), 'settings module discovered alongside core modules');
 $smarty = new Smarty();
-assert($handler->smartyInit($smarty) === $smarty);
+check($handler->smartyInit($smarty) === $smarty, 'filter registration runs even with PHP assertions disabled');
 $AUTH = new Auth();
 function check($condition, $name) {
     if (!$condition) { throw new RuntimeException($name); }
