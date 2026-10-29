@@ -41,7 +41,7 @@ try {
             if(!$draft || ($draft['mode']??'plain')!=='history' || !is_string($_POST['token']??null) || !hash_equals($draft['token'],$_POST['token']) || $draft['expires']<time() || !in_array($customer,$draft['ids'],true))throw new RuntimeException('Podgląd załącznika wygasł lub klient nie należy do tej wysyłki.');
             $c=$np->inspect($customer);if(!$c)throw new RuntimeException('Brak aktywnego klienta.');
             $attachment=NotifyPaymentHistory::build($DB,$c);
-            if(!hash_equals($draft['hashes'][$customer],$attachment['hash']))throw new RuntimeException('Historia klienta zmieniła się. Przygotuj nowy podgląd zbiorczy.');
+            if(!hash_equals($draft['hashes'][$customer],$np->mailPreviewHash($c,$settings,$attachment)))throw new RuntimeException('Historia klienta zmieniła się. Przygotuj nowy podgląd zbiorczy.');
             header('Content-Type: text/html; charset=UTF-8');header('Cache-Control: no-store');
             header("Content-Security-Policy: default-src 'none'; style-src 'unsafe-inline'; sandbox");
             echo $attachment['data'];exit;
@@ -56,10 +56,11 @@ try {
             $bulkPreview['start_countdown']=!empty($_POST['start_countdown']) && (int)$settings['block_after_days']>0;
             if($historyMode)foreach($bulkPreview['rows'] as &$row){
                 $attachment=NotifyPaymentHistory::build($DB,$row);
-                $hashes[(int)$row['id']]=$attachment['hash'];
+                $hashes[(int)$row['id']]=$np->mailPreviewHash($row,$previewSettings,$attachment);
                 $row['attachment_name']=$attachment['filename'];$row['attachment_count']=$attachment['count'];
             }
             unset($row);
+            if(!$historyMode && !$smsMode)foreach($bulkPreview['rows'] as $row)$hashes[(int)$row['id']]=$row['mail_hash'];
             if($smsMode)foreach($bulkPreview['rows'] as $row)$hashes[(int)$row['id']]=$row['sms_hash'];
             $_SESSION['lnp_bulk_confirm']=['token'=>$token,'ids'=>array_map('intval',array_column($bulkPreview['rows'],'id')),'revision'=>$settings['revision'],'expires'=>time()+600,'mode'=>$bulkPreview['mode'],'hashes'=>$hashes,'start_countdown'=>$bulkPreview['start_countdown']];
             $bulkPreview['token']=$token;
@@ -114,9 +115,10 @@ try {
                     $preview['sms_estimate']=$np->smsEstimate([['sms_body'=>$preview['sms_body'],'sms_recipients'=>$preview['recipients']]],$smsSettings);
                 }
             }
+            if(in_array($action,['notify','notify_manual'],true))$_SESSION['lnp_confirm']['history_hash']=$np->mailPreviewHash($c,$messageSettings);
             if($action==='notify_history'){
                 $preview['attachment']=NotifyPaymentHistory::build($DB,$c);
-                $_SESSION['lnp_confirm']['history_hash']=$preview['attachment']['hash'];
+                $_SESSION['lnp_confirm']['history_hash']=$np->mailPreviewHash($c,$messageSettings,$preview['attachment']);
                 $mailSettings=$settings;$mailSettings['channels']=['mail'];
                 $preview['recipients']=$np->notificationTargets($c,$mailSettings)['mail']??[];
                 $preview['body'].="\n\nW załączniku przesyłamy historię płatności i rozliczeń Państwa konta.";
@@ -148,9 +150,9 @@ try {
     if($tab==='customers') {
         $bulkJobs=$bulk->recent();
         $cached=$_SESSION['lnp_list']??null;
-        if(!$cached || ($cached['fees_version']??0)!==10 || $cached['revision']!==$settings['revision'] || ($cached['sms_revision']??-1)!==$smsSettings['revision'] || $cached['time']<time()-60 || isset($_GET['refresh'])) {
+        if(!$cached || ($cached['fees_version']??0)!==11 || $cached['revision']!==$settings['revision'] || ($cached['sms_revision']??-1)!==$smsSettings['revision'] || $cached['time']<time()-60 || isset($_GET['refresh'])) {
             $globalRows=$np->customerSnapshot();
-            $cached=['fees_version'=>10,'revision'=>$settings['revision'],'sms_revision'=>$smsSettings['revision'],'time'=>time(),
+            $cached=['fees_version'=>11,'revision'=>$settings['revision'],'sms_revision'=>$smsSettings['revision'],'time'=>time(),
                 'rows'=>$globalRows,'statistics'=>$np->customerStatistics($globalRows,$settings,$smsSettings)];
             $_SESSION['lnp_list']=$cached;
         }

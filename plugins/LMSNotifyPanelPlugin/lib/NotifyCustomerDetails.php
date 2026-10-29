@@ -19,6 +19,19 @@ final class NotifyCustomerDetails
         $text=preg_replace('/<br\s*\/?\s*>|<\/(?:p|div|li)>/i',"\n",$text??'');
         return trim(html_entity_decode(strip_tags($text),ENT_QUOTES|ENT_HTML5,'UTF-8'));
     }
+    public static function notificationInfo(array $event,array $reports): array
+    {
+        $time=(int)($event['created_at']??0);
+        if(($event['action']??'')==='notify_sms'){
+            $event['sms_states']=array_column($reports,'gateway_status');$delivered=[];
+            foreach($reports as $r)if($r['gateway_status']==='DELIVERED'){
+                $at=(int)($r['report_at']??0);if($at<=0)$at=(int)($r['updated_at']??0);
+                if($at>0)$delivered[]=$at;
+            }
+            if($delivered)$time=min($delivered);
+        }
+        return ['status'=>self::notificationStatus($event),'time'=>$time];
+    }
     public static function notificationStatus(array $event): string
     {
         if(($event['action']??'')==='notify_sms'){

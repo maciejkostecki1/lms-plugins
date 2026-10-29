@@ -17,6 +17,7 @@ final class NotifyPanel
     private $db;
     private $lms;
     private int $user;
+    private ?array $previewData=null;
     public function __construct($db, $lms, int $user = 0) { $this->db=new NotifyDb($db); $this->lms=$lms; $this->user=$user; }
     public function settings(): array
     {
@@ -107,32 +108,42 @@ final class NotifyPanel
     public function notificationInfo(int $customer): array
     {
         $event=$this->db->GetRow('SELECT created_at,action,result,details FROM lnp_history WHERE customerid=? AND (action IN (?,?) OR action LIKE ?) AND result IN (?,?,?) ORDER BY created_at DESC,id DESC LIMIT 1',[$customer,'notify_mail','notify_sms','invoice_notify-%','sent','pending','error'])?:[];
-        return ['status'=>$this->notificationEventStatus($event,$customer),'time'=>(int)($event['created_at']??0)];
+        return $this->notificationEventInfo($event,$customer);
     }
-    private function notificationEventStatus(array $event,int $customer): string
+    private function notificationEventInfo(array $event,int $customer,?array $reports=null): array
     {
-            if(($event['action']??'')==='notify_sms' && preg_match('/Wiadomości LMS: ([0-9, ]+)/',$event['details']??'',$matches)){
-                $messageIds=array_values(array_filter(array_map('intval',explode(',',$matches[1]))));
-                if($messageIds){
-                    $event['sms_states']=array_column($this->db->GetAll('SELECT d.gateway_status FROM lnp_sms_delivery d JOIN messageitems m ON m.id=d.itemid WHERE m.customerid=? AND m.messageid IN ?',[$customer,$messageIds])?:[],'gateway_status');
-                }
-            }
-        return NotifyCustomerDetails::notificationStatus($event);
+        $messageIds=self::eventMessages($event);
+        if($messageIds && $reports===null)$reports=$this->db->GetAll('SELECT d.gateway_status,d.report_at,d.updated_at,m.messageid FROM lnp_sms_delivery d JOIN messageitems m ON m.id=d.itemid WHERE m.customerid=? AND m.messageid IN ?',[$customer,$messageIds])?:[];
+        $reports=array_values(array_filter($reports??[],static fn($r)=>in_array((int)$r['messageid'],$messageIds,true)));
+        return NotifyCustomerDetails::notificationInfo($event,$reports);
+    }
+    private static function eventMessages(array $event): array
+    {
+        if(($event['action']??'')!=='notify_sms' || !preg_match('/Wiadomości LMS: ([0-9, ]+)/',$event['details']??'',$m))return [];
+        return array_values(array_filter(array_map('intval',explode(',',$m[1]))));
     }
     public function customerListDetails(array $rows): array
     {
         if(!$rows)return [];
-        $ids=array_map('intval',array_column($rows,'id'));$events=[];
+        $ids=array_map('intval',array_column($rows,'id'));$events=[];$details=[];$notes=[];$contacts=[];$reports=[];
         $blockStatuses=(new NotifyBlockNotice($this->db))->statuses($rows,$this->settings());
-        foreach($this->db->GetAll('SELECT DISTINCT ON (customerid) customerid,created_at,action,result,details FROM lnp_history
-            WHERE customerid IN ? AND (action IN (?,?) OR action LIKE ?) AND result IN (?,?,?)
-            ORDER BY customerid,created_at DESC,id DESC',[$ids,'notify_mail','notify_sms','invoice_notify-%','sent','pending','error'])?:[] as $event)$events[(int)$event['customerid']]=$event;
+        foreach($this->db->GetAll('SELECT id,notes,info FROM customers WHERE id IN ?',[$ids])?:[] as $d)$details[(int)$d['id']]=$d;
+        foreach($this->db->GetAll('SELECT DISTINCT ON (customerid) customerid,dt,message FROM customernotes WHERE customerid IN ? ORDER BY customerid,dt DESC,id DESC',[$ids])?:[] as $n)$notes[(int)$n['customerid']]=$n;
+        foreach($this->db->GetAll('SELECT customerid,contact,type FROM customercontacts WHERE customerid IN ?',[$ids])?:[] as $c)$contacts[(int)$c['customerid']][]=$c;
+        foreach($this->db->GetAll('SELECT DISTINCT ON (customerid) customerid,created_at,action,result,details FROM lnp_history WHERE customerid IN ? AND (action IN (?,?) OR action LIKE ?) AND result IN (?,?,?) ORDER BY customerid,created_at DESC,id DESC',[$ids,'notify_mail','notify_sms','invoice_notify-%','sent','pending','error'])?:[] as $event)$events[(int)$event['customerid']]=$event;
+        $messageIds=[];foreach($events as $event)$messageIds=array_merge($messageIds,self::eventMessages($event));
+        if($messageIds)foreach($this->db->GetAll('SELECT d.gateway_status,d.report_at,d.updated_at,m.messageid,m.customerid FROM lnp_sms_delivery d JOIN messageitems m ON m.id=d.itemid WHERE m.customerid IN ? AND m.messageid IN ?',[$ids,array_values(array_unique($messageIds))])?:[] as $report)$reports[(int)$report['customerid']][]=$report;
         foreach($rows as &$c){
-            $c['block_notice']=$blockStatuses[(int)$c['id']];
-            $c=$this->customerDetails($c);$event=$events[(int)$c['id']]??[];
-            $c['notification_status']=$this->notificationEventStatus($event,(int)$c['id']);
-            $c['notification_time']=(int)($event['created_at']??0);
-            $c['notification_result']=$event['result']??'';
+            $id=(int)$c['id'];$d=$details[$id]??[];$note=$notes[$id]??[];$all=$contacts[$id]??[];
+            $c['block_notice']=$blockStatuses[$id];
+            $c['customer_info']=NotifyCustomerDetails::noteText($d['info']??'');$c['customer_notes']=NotifyCustomerDetails::noteText($d['notes']??'');
+            $c['last_note']=NotifyCustomerDetails::noteText($note['message']??'');$c['last_note_time']=(int)($note['dt']??0);
+            $mail=array_values(array_filter($all,static fn($v)=>((int)$v['type'] & CONTACT_EMAIL)===CONTACT_EMAIL));
+            $c['email_status']=NotifyCustomerDetails::emailStatus($mail,!empty($c['mailingnotice']));$c['mail_ready']=$c['email_status']==='';$c['no_email']=$c['email_status']==='Brak e-maila';
+            $sms=array_filter($all,static fn($v)=>((int)$v['type'] & (CONTACT_MOBILE|CONTACT_NOTIFICATIONS|CONTACT_DISABLED))===(CONTACT_MOBILE|CONTACT_NOTIFICATIONS) && NotifySmsApi::normalizeNumber($v['contact'])!==null);
+            $c['sms_ready']=!empty($c['smsnotice']) && (bool)$sms;
+            $event=$events[$id]??[];$info=$this->notificationEventInfo($event,$id,$reports[$id]??[]);
+            $c['notification_status']=$info['status'];$c['notification_time']=$info['time'];$c['notification_result']=$event['result']??'';
         }unset($c);
         return $rows;
     }
@@ -189,6 +200,7 @@ final class NotifyPanel
     public function act(int $id,string $action,int $revision,?string $historyHash=null,bool $automatic=false,bool $manualCountdown=false): string
     {
         if (!in_array($action,['notify','notify_manual','notify_history','notify_sms_no_mail','notify_sms','block','unblock'],true) || $id<1) throw new RuntimeException('Nieprawidłowa operacja.');
+        $this->previewData=null;
         // One sender/blocking operator per customer, shared by cron and UI.
         $lock=$this->db->GetOne('SELECT pg_try_advisory_lock(762319, ?)',[$id]);
         if (!in_array($lock,[true,1,'1','t'],true)) throw new RuntimeException('Operacja dla klienta już trwa.');
@@ -207,19 +219,17 @@ final class NotifyPanel
                     if(!$historyHash || !hash_equals($historyHash,$this->smsPreviewHash($c,$s)))throw new RuntimeException('Numer, treść lub ustawienia SMS zmieniły się. Przygotuj nowy podgląd.');
                     return $this->notify($c,$s,null,$manualCountdown?'manual':null,true,$historyHash);
                 }
-                if($action==='notify_manual')$s['channels']=['mail'];
-                if($action==='notify_history'){
-                    $s['channels']=['mail'];$attachment=NotifyPaymentHistory::build($this->db,$c);
-                    if(!$historyHash || !hash_equals($historyHash,$attachment['hash']))throw new RuntimeException('Historia płatności zmieniła się. Przygotuj nowy podgląd.');
-                    return $this->notify($c,$s,$attachment,$manualCountdown?'manual':null);
-                }
-                // A manual threshold action previews only mail. SMS requires its own confirmation.
+                $attachment=null;
                 if(!$automatic)$s['channels']=['mail'];
-                elseif(in_array('sms',$s['channels'],true)){
+                if($action==='notify_history')$attachment=NotifyPaymentHistory::build($this->db,$c);
+                if(!$automatic && !empty($this->notificationTargets($c,$s)['mail'])){
+                    if(!$historyHash || !hash_equals($historyHash,$this->mailPreviewHash($c,$s,$attachment)))throw new RuntimeException('Odbiorcy, treść lub historia zmieniły się. Przygotuj nowy podgląd e-mail.');
+                }
+                if($automatic && in_array('sms',$s['channels'],true)){
                     $sms=(new NotifySmsSettings($this->db))->settings();
                     if(!$sms['enabled'] || !$sms['allow_customer_sms'])$s['channels']=array_values(array_diff($s['channels'],['sms']));
                 }
-                return $this->notify($c,$s,null,$automatic && $action==='notify'?'automatic':($manualCountdown?'manual':null));
+                return $this->notify($c,$s,$attachment,$automatic?'automatic':($manualCountdown?'manual':null),false,null,$automatic?null:$historyHash);
             }
             if($automatic && $action==='block' && !$s['auto_block'] && empty($this->blockNoticeStatus($c,$s)['manual_ready']))return 'Brak aktywnego ręcznego zlecenia blokady.';
             return $this->nodes($c,$action);
@@ -285,11 +295,15 @@ final class NotifyPanel
         $id=(int)$c['id'];$targets=[];
         foreach($s['channels'] as $channel) {
             $action='notify_'.$channel;
-            if($this->db->GetOne('SELECT 1 FROM lnp_history WHERE customerid=? AND action=? AND result IN (?,?) AND created_at>? LIMIT 1',
-                [$id,$action,'pending','sent',time()-$s['repeat_days']*86400])) continue;
+            $recent=$this->previewData!==null?isset($this->previewData['recent'][$id][$action]):$this->db->GetOne('SELECT 1 FROM lnp_history WHERE customerid=? AND action=? AND result IN (?,?) AND created_at>? LIMIT 1',
+                [$id,$action,'pending','sent',time()-$s['repeat_days']*86400]);
+            if($recent)continue;
             if(empty($c[$channel==='mail'?'mailingnotice':'smsnotice'])) continue;
             $flag=($channel==='mail'?CONTACT_EMAIL:CONTACT_MOBILE)|CONTACT_NOTIFICATIONS;
-            $contacts=$this->db->GetCol('SELECT DISTINCT contact FROM customercontacts WHERE customerid=? AND (type & ?)=? ORDER BY contact',
+            if($this->previewData!==null){
+                $contacts=[];foreach($this->previewData['contacts'][$id]??[] as $contact)if(((int)$contact['type'] & ($flag|CONTACT_DISABLED))===$flag)$contacts[]=$contact['contact'];
+                $contacts=array_values(array_unique($contacts));sort($contacts,SORT_STRING);
+            }else $contacts=$this->db->GetCol('SELECT DISTINCT contact FROM customercontacts WHERE customerid=? AND (type & ?)=? ORDER BY contact',
                 [$id,$flag|CONTACT_DISABLED,$flag])?:[];
             $contacts=array_values(array_filter($contacts,static function($v) use($channel) {
                 return $channel==='mail'?filter_var($v,FILTER_VALIDATE_EMAIL)!==false:NotifySmsApi::normalizeNumber($v)!==null;
@@ -308,9 +322,12 @@ final class NotifyPanel
     public function manualPreview(?array $settings=null,bool $smsNoMail=false,?array $snapshot=null,bool $withHashes=true): array
     {
         $s=$settings??$this->settings();$rows=[];$emailCustomers=[];
+        $snapshot=$snapshot??$this->customerSnapshot();
+        $previous=$this->previewData;$this->previewData=$this->previewData($snapshot,$s);
+        try{
         if($smsNoMail){
             $s['channels']=['sms'];
-            $emailCustomers=array_fill_keys(array_map('intval',$this->db->GetCol("SELECT DISTINCT customerid FROM customercontacts WHERE (type & ?)=? AND trim(contact)<>''",[CONTACT_EMAIL,CONTACT_EMAIL])?:[]),true);
+            foreach($this->previewData['contacts'] as $id=>$contacts)foreach($contacts as $contact)if(((int)$contact['type'] & CONTACT_EMAIL)===CONTACT_EMAIL && trim($contact['contact'])!=='')$emailCustomers[$id]=true;
         }
         $skipped=['excluded'=>0,'review'=>0,'contact'=>0,'message'=>0,'threshold'=>0];
         foreach($snapshot??$this->customerSnapshot() as $c){
@@ -322,6 +339,7 @@ final class NotifyPanel
             $targets=$this->notificationTargets($c,$s);
             if(!$targets){++$skipped['contact'];continue;}
             $c['channels']=array_keys($targets);
+            if(!$smsNoMail && $withHashes)$c['mail_hash']=$this->mailPreviewHash($c,$s);
             if($smsNoMail){
                 try{$c['sms_body']=$this->messagePreview($c,$s)['sms_body'];}
                 catch(RuntimeException $e){++$skipped['message'];continue;}
@@ -332,6 +350,17 @@ final class NotifyPanel
         }
         usort($rows,static fn($a,$b)=>$b['debt']<=>$a['debt']);
         return ['rows'=>$rows,'skipped'=>$skipped,'revision'=>$s['revision']];
+        }finally{$this->previewData=$previous;}
+    }
+    private function previewData(array $rows,array $s): array
+    {
+        $out=['contacts'=>[],'recent'=>[],'customers'=>[],'gateway'=>null];
+        foreach(array_chunk(array_map('intval',array_column($rows,'id')),500) as $ids){
+            foreach($this->db->GetAll('SELECT customerid,contact,type FROM customercontacts WHERE customerid IN ?',[$ids])?:[] as $r)$out['contacts'][(int)$r['customerid']][]=$r;
+            foreach($this->db->GetAll('SELECT DISTINCT customerid,action FROM lnp_history WHERE customerid IN ? AND action IN (?,?) AND result IN (?,?) AND created_at>?',[$ids,'notify_mail','notify_sms','pending','sent',time()-$s['repeat_days']*86400])?:[] as $r)$out['recent'][(int)$r['customerid']][$r['action']]=true;
+            foreach($this->db->GetAll('SELECT c.id,c.divisionid,d.account FROM customers c LEFT JOIN divisions d ON d.id=c.divisionid WHERE c.id IN ?',[$ids])?:[] as $r)$out['customers'][(int)$r['id']]=$r;
+        }
+        return $out;
     }
     public function smsEstimate(array $rows,array $gateway): array
     {
@@ -353,7 +382,7 @@ final class NotifyPanel
             if((float)$c['debt']<=0.009)continue;
             ++$debtors;
             if(NotifyPolicy::notificationDue($c,$s))++$notifyThreshold;
-            if($c['percent']!==null && (float)$c['percent']>=(int)$s['block_percent']){
+            if(NotifyPolicy::thresholdDue($c,(int)$s['block_percent'])){
                 ++$threshold;
                 if($c['excluded'] || $c['state']==='review')++$thresholdHeld;
             }
@@ -368,15 +397,24 @@ final class NotifyPanel
     public function messagePreview(array $c,array $s): array
     {
         if(strpos($s['subject']."\n".$s['body'],'%bankaccount')!==false){
-            $account=$this->db->GetOne('SELECT d.account FROM customers c LEFT JOIN divisions d ON d.id=c.divisionid WHERE c.id=?',[$c['id']]);
+            $account=$this->previewData!==null?($this->previewData['customers'][(int)$c['id']]['account']??null):$this->db->GetOne('SELECT d.account FROM customers c LEFT JOIN divisions d ON d.id=c.divisionid WHERE c.id=?',[$c['id']]);
             $c['bankaccount']=format_bankaccount(bankaccount($c['id'],$account));
         }
         $message=['subject'=>NotifyPolicy::render($s['subject'],$c),'body'=>NotifyPolicy::render($s['body'],$c)];
         if(in_array('sms',$s['channels'],true)){
-            $division=(int)$this->db->GetOne('SELECT divisionid FROM customers WHERE id=?',[$c['id']]);
+            $division=$this->previewData!==null?(int)($this->previewData['customers'][(int)$c['id']]['divisionid']??0):(int)$this->db->GetOne('SELECT divisionid FROM customers WHERE id=?',[$c['id']]);
             $message['sms_body']=NotifySmsCompany::message($division,(int)$s['block_after_days'],(float)$c['debt'],$s['sms_body']);
         }
         return $message;
+    }
+    public function mailPreviewHash(array $c,array $s,?array $attachment=null): string
+    {
+        $s['channels']=['mail'];
+        $recipients=$this->notificationTargets($c,$s)['mail']??[];sort($recipients,SORT_STRING);
+        $message=$this->messagePreview($c,$s);
+        return hash('sha256',json_encode(['customer'=>(int)$c['id'],'recipients'=>$recipients,
+            'subject'=>$message['subject'],'body'=>$message['body'],'attachment'=>$attachment['hash']??null,
+            'sender'=>[$s['sender_email'],$s['sender_name']],'revision'=>$s['revision']],JSON_THROW_ON_ERROR));
     }
     public function smsPreviewHash(array $c,array $s): string
     {
@@ -385,17 +423,21 @@ final class NotifyPanel
     }
     private function smsFingerprint(int $customer,array $recipients,string $body): string
     {
-        $gateway=(new NotifySmsSettings($this->db))->settings();
+        if($this->previewData!==null){
+            if($this->previewData['gateway']===null)$this->previewData['gateway']=(new NotifySmsSettings($this->db))->settings();
+            $gateway=$this->previewData['gateway'];
+        }else $gateway=(new NotifySmsSettings($this->db))->settings();
         return hash('sha256',json_encode(['customer'=>$customer,'recipients'=>$recipients,'body'=>$body,
             'gateway_revision'=>$gateway['revision'],'sender'=>$gateway['sender']],JSON_THROW_ON_ERROR));
     }
-    private function notify(array $c,array $s,?array $attachment=null,?string $countdownOrigin=null,bool $manualSms=false,?string $smsHash=null): string
+    private function notify(array $c,array $s,?array $attachment=null,?string $countdownOrigin=null,bool $manualSms=false,?string $smsHash=null,?string $mailHash=null): string
     {
         $id=(int)$c['id']; $sent=0;$uncertain=false;
         foreach($this->notificationTargets($c,$s) as $channel=>$contacts){
             $action='notify_'.$channel;
             $message=$this->messagePreview($c,$s);$body=$channel==='sms'?$message['sms_body']:$message['body'];$subject=$message['subject'];
             if($channel==='sms' && $manualSms && (!$smsHash || !hash_equals($smsHash,$this->smsFingerprint($id,$contacts,$body))))throw new RuntimeException('Podgląd SMS zmienił się. Przygotuj go ponownie.');
+            if($channel==='mail' && $mailHash!==null && !hash_equals($mailHash,$this->mailPreviewHash($c,$s,$attachment)))throw new RuntimeException('Podgląd e-mail zmienił się. Przygotuj go ponownie.');
             if($attachment)$body.="\n\nW załączniku przesyłamy historię płatności i rozliczeń Państwa konta.";
             // A durable intent is recorded before the external API. An interrupted send is not retried automatically.
             $attachmentNote=$attachment?'Załącznik: '.$attachment['filename'].'; SHA256: '.$attachment['hash'].'. ':'';
@@ -409,6 +451,7 @@ final class NotifyPanel
                         'body'=>$body,'userid'=>$this->user?:null,'sender'=>['name'=>$s['sender_name'],'mail'=>$s['sender_email']],
                         'recipients'=>[$recipient]]);
                     $messageIds[]=$m['id']; $item=$m['items'][$id][$destination];$messageItems[]=(int)$item;
+                    if($channel==='sms' && $countdownOrigin!==null)(new NotifySmsDelivery($this->db))->pendingNotice($c,$event,$messageItems,$countdownOrigin);
                     if($channel==='mail') {
                         $result=$this->lms->SendMail($destination,['From'=>$s['sender_email'],'To'=>$destination,
                             'Subject'=>$subject,'Reply-To'=>$s['sender_email']],$body,$attachment?[$attachment]:null);

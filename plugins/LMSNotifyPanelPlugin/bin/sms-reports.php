@@ -27,6 +27,7 @@ try{
         catch(Throwable $e){++$waiting;}
     }
     if($keys)$client->request('ack',$keys);
+    if(isset($options['run']))$delivery->reconcilePending($panel);
     echo json_encode(['mode'=>isset($options['run'])?'APPLY REPORTS':'READ ONLY','available'=>count($events),'processed'=>$processed,'waiting'=>$waiting,'unrelated'=>$ignored,'sms_sent'=>0],JSON_THROW_ON_ERROR).PHP_EOL;
     if($waiting)exit(2);
 }catch(Throwable $e){fwrite(STDERR,"Pobieranie raportów SMSAPI nie powiodło się. Sprawdź połączenie i prywatną konfigurację.\n");exit(1);}

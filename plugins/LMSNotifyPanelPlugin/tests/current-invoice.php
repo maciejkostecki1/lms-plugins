@@ -1,4 +1,6 @@
 <?php
+if(PHP_SAPI!=='cli'){http_response_code(403);exit;}
+
 require_once __DIR__.'/../lib/NotifyCurrentInvoice.php';
 date_default_timezone_set('Europe/Warsaw');
 $start=strtotime('2026-10-01');$now=strtotime('2026-10-22 12:00');

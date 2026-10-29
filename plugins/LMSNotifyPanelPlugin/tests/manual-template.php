@@ -1,4 +1,6 @@
 <?php
+if(PHP_SAPI!=='cli'){http_response_code(403);exit;}
+
 require_once __DIR__.'/../lib/NotifyPolicy.php';
 $c=['id'=>1271,'customername'=>'Jan Testowy','balance'=>-1663,'debt'=>875,'base'=>380,'percent'=>230.26,'bankaccount'=>'12 3456 7890'];
 $text=NotifyPolicy::render('Dzień dobry %name. Saldo: %balance zł. Dług abonamentowy: %debt zł. Rachunek: %bankaccount.',$c);

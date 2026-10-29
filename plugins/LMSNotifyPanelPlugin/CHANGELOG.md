@@ -1,5 +1,15 @@
 # Zmiany
 
+## 0.8.6 — 29.10.2026
+
+- Odcisk odbiorców i treści wszystkich ręcznych e-maili, również z historią i w kolejce.
+- Zapis zamiaru odliczania przed SMSAPI i odzyskiwanie oczekujących zleceń bez powtórnych wysyłek.
+- Porównanie licznika blokad w groszach i prawdziwy czas doręczenia SMS.
+- Grupowe odczyty danych klientów, podglądów i faktur; wspólna mapa statusów raportów.
+- Nadrabianie pominiętej godziny faktur z trwałym rejestrem dnia/profilu i zabezpieczeniem dnia wdrożenia.
+- Poprawiona izolacja testów, ochrona CLI i nowe testy regresji oraz migracji.
+- Migracja 0.8.6 dodaje stan techniczny i indeksy; progi i zasady rozliczeń bez zmian.
+
 ## 0.8.5 — 29.10.2026
 
 - Liczniki zadłużenia przeniesione do tabeli pod odpowiednimi progami.

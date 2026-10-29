@@ -1,4 +1,6 @@
 <?php
+if(PHP_SAPI!=='cli'){http_response_code(403);exit;}
+
 require_once __DIR__.'/../lib/NotifyReminderRunner.php';
 $calls=0;$fake=static function()use(&$calls){++$calls;return 7;};
 ob_start();

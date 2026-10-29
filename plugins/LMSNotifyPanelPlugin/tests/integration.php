@@ -9,6 +9,7 @@ $DB->BeginTrans();
 try {
     $schema=file_get_contents(__DIR__.'/../sql/install.pgsql.sql');
     $schema=preg_replace('/CREATE TABLE /','CREATE TEMP TABLE ',$schema);
+    $schema=str_replace('CREATE TEMP TABLE IF NOT EXISTS ','CREATE TEMP TABLE ',$schema);
     $schema=preg_replace('/CREATE INDEX .*?;/s','',$schema);
     $DB->Execute($schema);
     $DB->Execute('CREATE TEMP TABLE customers(id integer PRIMARY KEY,name text,lastname text,status integer,deleted integer,cutoffstop bigint,mailingnotice integer,smsnotice integer,divisionid integer DEFAULT 0,notes text DEFAULT \'\',info text DEFAULT \'\')');
@@ -26,6 +27,7 @@ try {
     ConfigHelper::getConfig('finances.suspension_percentage',0);
     $DB->Execute('CREATE TEMP TABLE uiconfig(section text,var text,value text,disabled integer,userid integer,divisionid integer)');
     $DB->Execute("INSERT INTO uiconfig VALUES('finances','suspension_percentage','0',0,NULL,NULL)");
+    $DB->Execute('CREATE TEMP TABLE lnp_sms_delivery(itemid integer,gateway_status text,report_at bigint,updated_at bigint)');
     $DB->Execute('CREATE TEMP TABLE messageitems(id integer,status integer,lastdate bigint,error text,externalmsgid text)');
     $DB->Execute("INSERT INTO customers VALUES(1,'Test','Klient',3,0,0,1,1)");
     $DB->Execute('INSERT INTO nodes VALUES(11,1,1),(12,1,0)');
@@ -101,10 +103,10 @@ try {
     verify((int)$DB->GetOne('SELECT access FROM nodes WHERE id=11')===1 && (int)$DB->GetOne('SELECT suspended FROM assignments WHERE liabilityid=1')===0,'repayment restores both stages');
     $np->save(array_merge($s,['suspend_percent'=>300]),$s['revision']);$s=$np->settings();
     $api->balance=-200;
-    $np->act(1,'notify',$s['revision']); $np->act(1,'notify',$s['revision']);
+    $np->act(1,'notify',$s['revision'],$np->mailPreviewHash($np->inspect(1),$s)); $np->act(1,'notify',$s['revision'],$np->mailPreviewHash($np->inspect(1),$s));
     verify($api->deliveries===1,'cooldown avoids duplicate mail and disabled contact excluded');
     $np->exclude(1,30,'Test exception');
-    try{$np->act(1,'notify',$s['revision']);throw new LogicException('exception ignored');}catch(RuntimeException $ex){verify(true,'exception prevents actions');}
+    try{$np->act(1,'notify',$s['revision'],$np->mailPreviewHash($np->inspect(1),$s));throw new LogicException('exception ignored');}catch(RuntimeException $ex){verify(true,'exception prevents actions');}
     $np->exclude(1,0,'');
     $api->balance=-300; $api->monthly=[];
     try{allowBlockTest($np,$DB,$s);$np->act(1,'block',$s['revision']);throw new LogicException('zero base accepted');}catch(RuntimeException $ex){verify(true,'no base prevents block');}
@@ -128,15 +130,15 @@ try {
     // All manual channels obey the same notification threshold as automatic sending.
     $DB->Execute('DELETE FROM lnp_history WHERE customerid=1 AND action IN (?,?)',['notify_mail','notify_sms']);
     $api->balance=-199.99;$before=$api->deliveries;
-    try{$np->act(1,'notify',$s['revision']);throw new LogicException('Automatic threshold bypassed');}catch(RuntimeException $e){verify(true,'automatic notification still requires percentage threshold');}
+    try{$np->act(1,'notify',$s['revision'],$np->mailPreviewHash($np->inspect(1),$s));throw new LogicException('Automatic threshold bypassed');}catch(RuntimeException $e){verify(true,'automatic notification still requires percentage threshold');}
     foreach(['notify_manual','notify_history','notify_sms','notify_sms_no_mail'] as $action){
         try{$np->act(1,$action,$s['revision']);throw new LogicException('Below-threshold manual action accepted');}catch(RuntimeException $e){verify($api->deliveries===$before,'below threshold rejected before sender: '.$action);}
     }
     $api->balance=-200;
-    $np->act(1,'notify_manual',$s['revision']);verify($api->deliveries===$before+1,'manual notification accepted exactly at 200 percent');
-    $np->act(1,'notify_manual',$s['revision']);verify($api->deliveries===$before+1,'manual cooldown prevents duplicate');
+    $np->act(1,'notify_manual',$s['revision'],$np->mailPreviewHash($np->inspect(1),$s));verify($api->deliveries===$before+1,'manual notification accepted exactly at 200 percent');
+    $np->act(1,'notify_manual',$s['revision'],$np->mailPreviewHash($np->inspect(1),$s));verify($api->deliveries===$before+1,'manual cooldown prevents duplicate');
     $api->balance=0;
-    try{$np->act(1,'notify_manual',$s['revision']);throw new LogicException('Paid customer notified');}catch(RuntimeException $e){verify(true,'manual notification refuses paid customer');}
+    try{$np->act(1,'notify_manual',$s['revision'],$np->mailPreviewHash($np->inspect(1),$s));throw new LogicException('Paid customer notified');}catch(RuntimeException $e){verify(true,'manual notification refuses paid customer');}
     // Payment history uses temporary ledger tables and a fake sender only.
     $DB->Execute("ALTER TABLE cash ADD COLUMN currency text DEFAULT 'PLN', ADD COLUMN comment text DEFAULT 'Test ledger', ADD COLUMN type integer DEFAULT 0");
 
@@ -146,15 +148,15 @@ try {
     $api->balance=-200;$c=$np->inspect(1);$attachment=NotifyPaymentHistory::build($DB,$c);$before=$api->deliveries;
     try{$np->act(1,'notify_history',$s['revision'],'invalid');throw new LogicException('Stale attachment sent');}catch(RuntimeException $e){verify($api->deliveries===$before,'changed attachment refuses delivery');}
     $noticesBeforeHistory=$DB->GetAll('SELECT * FROM lnp_block_notices');
-    $np->act(1,'notify_history',$s['revision'],$attachment['hash']);
+    $np->act(1,'notify_history',$s['revision'],$np->mailPreviewHash($np->inspect(1),$s,$attachment));
     verify($api->deliveries===$before+1 && count($api->lastFiles)===1,'history notification sends exactly one attachment via fake mail API');
     verify($DB->GetAll('SELECT * FROM lnp_block_notices')===$noticesBeforeHistory,'manual history notification does not start countdown');
     verify($api->lastFiles[0]['data']===$attachment['data'] && $api->lastFiles[0]['content_type']==='text/html; charset=UTF-8','sent HTML equals preview bytes');
-    $np->act(1,'notify_history',$s['revision'],$attachment['hash']);
+    $np->act(1,'notify_history',$s['revision'],$np->mailPreviewHash($np->inspect(1),$s,$attachment));
     verify($api->deliveries===$before+1,'history notification shares notification cooldown');
     $DB->Execute('DELETE FROM lnp_history WHERE customerid=1 AND action=?',['notify_mail']);
     $DB->Execute('UPDATE customers SET mailingnotice=0 WHERE id=1');
-    $np->act(1,'notify_history',$s['revision'],$attachment['hash']);
+    $np->act(1,'notify_history',$s['revision'],$np->mailPreviewHash($np->inspect(1),$s,$attachment));
     verify($api->deliveries===$before+1,'history notification respects mail consent');
     $DB->Execute('INSERT INTO lnp_history(created_at,customerid,action,result,details,userid) VALUES(?,1,?,?,?,0)',[time()+2,'notify_mail','sent','Załącznik: historia-platnosci-1.html; fixture only']);
     $details=$np->customerListDetails([$np->inspect(1)])[0];
@@ -170,10 +172,10 @@ try {
     $DB->Execute('DELETE FROM lnp_history');$DB->Execute('DELETE FROM lnp_block_notices');
     $DB->Execute('DELETE FROM messageitems WHERE id=1');$DB->Execute('UPDATE customers SET mailingnotice=1 WHERE id=1');
     $api->balance=-400;$api->sendStatus=MSG_SENT;
-    $np->act(1,'notify_manual',$s['revision']);
+    $np->act(1,'notify_manual',$s['revision'],$np->mailPreviewHash($np->inspect(1),$s));
     verify((int)$DB->GetOne('SELECT count(*) FROM lnp_block_notices WHERE customerid=1')===0,'manual notification does not start countdown');
     $DB->Execute('DELETE FROM lnp_history');$DB->Execute('DELETE FROM messageitems WHERE id=1');
-    $np->act(1,'notify_manual',$s['revision'],null,false,true);
+    $np->act(1,'notify_manual',$s['revision'],$np->mailPreviewHash($np->inspect(1),$s),false,true);
     verify($DB->GetOne('SELECT origin FROM lnp_block_notices WHERE customerid=1')==='manual','explicit manual option starts countdown');
     $DB->Execute('DELETE FROM lnp_block_notices');$DB->Execute('DELETE FROM lnp_history');$DB->Execute('DELETE FROM messageitems WHERE id=1');
     $np->act(1,'notify',$s['revision'],null,true);
@@ -185,7 +187,7 @@ try {
     $np->act(1,'block',$s['revision'],null,true);
     verify((int)$DB->GetOne('SELECT access FROM nodes WHERE id=11')===1,'fresh scheduler guard refuses unauthorized block');
     $DB->Execute('DELETE FROM lnp_history');$DB->Execute('DELETE FROM messageitems WHERE id=1');
-    $np->act(1,'notify_manual',$s['revision'],null,false,true);
+    $np->act(1,'notify_manual',$s['revision'],$np->mailPreviewHash($np->inspect(1),$s),false,true);
     verify($np->scheduledActions($np->inspect(1),$planSettings)===[],'new manual countdown waits even with auto block off');
     $DB->Execute("UPDATE lnp_block_notices SET sent_at=? WHERE origin='manual'",[time()-7*86400]);
     verify($np->scheduledActions($np->inspect(1),$planSettings)===['block'],'expired manual countdown independently schedules block');
@@ -193,7 +195,7 @@ try {
     verify($np->scheduledActions($np->inspect(1),$planSettings)===['block'],'expired countdown blocks below notification and block percentage thresholds');
     $api->balance=0;verify($np->scheduledActions($np->inspect(1),$planSettings)===[],'paid debt cancels countdown block');
     $api->balance=-400;
-    $np->act(1,'notify_manual',$s['revision'],null,false,true);
+    $np->act(1,'notify_manual',$s['revision'],$np->mailPreviewHash($np->inspect(1),$s),false,true);
     $DB->Execute("UPDATE lnp_block_notices SET cycle_key=?,sent_at=? WHERE origin='manual'",[$np->inspect(1)['debt_cycle'],time()-7*86400]);
     $DB->Execute('UPDATE lnp_block_notices SET sent_at=? WHERE customerid=1',[time()-7*86400]);
     $np->act(1,'block',$s['revision']);
@@ -218,6 +220,20 @@ try {
     verify((int)$DB->GetOne('SELECT suspended FROM assignments WHERE liabilityid=1')===1,'zero countdown preserves billing suspension threshold');
     $api->balance=0;$np->act(1,'unblock',$s['revision']);
     verify((int)$DB->GetOne('SELECT access FROM nodes WHERE id=11')===1,'zero countdown restores device after repayment');
+    $api->balance=-300;$api->sendStatus=MSG_SENT;
+    $DB->Execute('DELETE FROM lnp_history');$DB->Execute('DELETE FROM messageitems');
+    $s=$np->settings();$s['sender_email']='sender@example.invalid';$s['channels']=['mail'];$np->save($s,$s['revision']);$s=$np->settings();
+    $DB->Execute('DELETE FROM customercontacts');$DB->Execute('INSERT INTO customercontacts VALUES(?,?,?)',[1,'test@example.invalid',CONTACT_EMAIL|CONTACT_NOTIFICATIONS]);
+    $attachment=NotifyPaymentHistory::build($DB,$np->inspect(1));
+    $hash=$np->mailPreviewHash($np->inspect(1),$s,$attachment);$before=$api->deliveries;
+    $DB->Execute('UPDATE customercontacts SET contact=?',['changed@example.invalid']);
+    try{$np->act(1,'notify_history',$s['revision'],$hash);throw new LogicException('Changed history recipient accepted');}catch(RuntimeException $e){verify($api->deliveries===$before,'history recipient changed after preview refuses delivery');}
+    $DB->Execute('UPDATE customercontacts SET contact=?',['test@example.invalid']);
+    $hash=$np->mailPreviewHash($np->inspect(1),$s);$DB->Execute('UPDATE customercontacts SET contact=?',['changed@example.invalid']);
+    try{$np->act(1,'notify_manual',$s['revision'],$hash);throw new LogicException('Changed plain recipient accepted');}catch(RuntimeException $e){verify($api->deliveries===$before,'plain email recipient changed after preview refuses delivery');}
+    $DB->Execute('UPDATE customercontacts SET contact=?',['test@example.invalid']);
+    $hash=$np->mailPreviewHash($np->inspect(1),$s);$c=$np->inspect(1);$c['customername']='Changed fixture name';
+    verify(!hash_equals($hash,$np->mailPreviewHash($c,$s+[])) || strpos($s['body'],'%name')===false,'preview fingerprint covers rendered message');
     echo "ALL ISOLATED INTEGRATION TESTS PASSED; no external deliveries.\n";
 } finally {
     $DB->RollbackTrans();

@@ -4,7 +4,7 @@ class LMSNotifyPanelPlugin extends LMSPlugin
     const PLUGIN_DIRECTORY_NAME = 'LMSNotifyPanelPlugin';
     const PLUGIN_NAME = 'Płatności i blokady';
     const PLUGIN_DESCRIPTION = 'Procentowe progi salda: powiadomienia i blokady klientów';
-    const PLUGIN_SOFTWARE_VERSION = '0.8.5';
+    const PLUGIN_SOFTWARE_VERSION = '0.8.6';
     public function registerHandlers()
     {
         require_once __DIR__ . '/handlers/NotifyPanelInitHandler.php';

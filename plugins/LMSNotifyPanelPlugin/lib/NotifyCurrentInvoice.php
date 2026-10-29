@@ -51,9 +51,10 @@ final class NotifyCurrentInvoice
             .' GROUP BY d.id,d.customerid,d.name,d.number,d.cdate,d.paytime,d.closed,n.template,c.mailingnotice,c.cutoffstop,di.account ORDER BY d.customerid,d.cdate,d.id',
             array_merge([DOC_INVOICE,$start,$now,CSTATUS_CONNECTED,'PLN'],$customer!==null?[$customer]:[]))?:[];
         $groups=[];foreach($rows as $row)$groups[(int)$row['customerid']][]=$row;
-        $out=[];
+        $out=[];$ledger=[];
+        foreach(array_chunk(array_map('intval',array_keys($groups)),100) as $ids)foreach($db->GetAll('SELECT customerid,time,value*currencyvalue AS amount,docid FROM cash WHERE customerid IN ? AND time<=? ORDER BY customerid,time,id',[$ids,$now])?:[] as $entry)$ledger[(int)$entry['customerid']][]=$entry;
         foreach($groups as $id=>$invoices){
-            $entries=$db->GetAll('SELECT time,value*currencyvalue AS amount,docid FROM cash WHERE customerid=? AND time<=? ORDER BY time,id',[$id,$now])?:[];
+            $entries=$ledger[$id]??[];
             foreach(self::allocate($invoices,$entries,$start,$now) as $i)$out[]=$i;
         }
         return $out;

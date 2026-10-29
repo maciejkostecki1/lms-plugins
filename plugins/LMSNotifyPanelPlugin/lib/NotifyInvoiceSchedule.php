@@ -16,9 +16,16 @@ final class NotifyInvoiceSchedule
     }
     public static function atTime(string $value,int $now): bool
     {
-        return self::valid($value) && (new DateTimeImmutable('@'.$now))->setTimezone(new DateTimeZone('Europe/Warsaw'))->format('H:i')===$value;
+        return self::valid($value) && (new DateTimeImmutable('@'.$now))->setTimezone(new DateTimeZone('Europe/Warsaw'))->format('H:i')>=$value;
     }
-    public function due(int $now): bool{return self::atTime($this->time(),$now);}
+    public function due(int $now): bool
+    {
+        $value=$this->time();$local=(new DateTimeImmutable('@'.$now))->setTimezone(new DateTimeZone('Europe/Warsaw'));
+        $from=$this->db->GetOne('SELECT value FROM lnp_runtime WHERE name=?',['invoice_catchup_from']);
+        // Do not trigger a retroactive send on the deployment day.
+        if($from && $local->format('Ymd')<$from)return $local->format('H:i')===$value;
+        return self::atTime($value,$now);
+    }
     public function save(string $value,int $user): void
     {
         if(!self::valid($value))throw new RuntimeException('Podaj godzinę w formacie GG:MM.');
@@ -32,13 +39,14 @@ final class NotifyInvoiceSchedule
             $this->db->CommitTrans();
         }catch(Throwable $e){$this->db->RollbackTrans();throw $e;}
     }
-    public function reminderOnce(int $now,callable $send): int
+    public function reminderOnce(int $now,callable $send,string $profile='reminder'): int
     {
         $locked=$this->db->GetOne('SELECT pg_try_advisory_lock(762319,0)');
         if(!in_array($locked,[true,1,'1','t'],true))return 0;
         try{
+            if(!in_array($profile,['reminder','notify-overdue','notify-overdue-7'],true))throw new RuntimeException('Nieznany profil harmonogramu.');
             $day=(new DateTimeImmutable('@'.$now))->setTimezone(new DateTimeZone('Europe/Warsaw'))->format('Ymd');
-            $action='reminder_day_'.$day;
+            $action=($profile==='reminder'?'reminder_day_':($profile==='notify-overdue'?'overdue_day_':'overdue7_day_')).$day;
             if($this->db->GetOne('SELECT 1 FROM lnp_history WHERE customerid=0 AND action=?',[$action]))return 0;
             // Durable claim precedes delivery. A failed or interrupted run needs manual review.
             $event=$this->db->GetOne('INSERT INTO lnp_history(created_at,customerid,action,result,details,userid) VALUES(?,0,?,?,?,0) RETURNING id',[$now,$action,'pending','Rozpoczęto dzienny przebieg przypomnienia przed terminem.']);

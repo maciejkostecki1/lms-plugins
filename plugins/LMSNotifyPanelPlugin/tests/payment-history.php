@@ -1,4 +1,6 @@
 <?php
+if(PHP_SAPI!=='cli'){http_response_code(403);exit;}
+
 require_once __DIR__.'/../lib/NotifyPaymentHistory.php';
 $customer=['id'=>17,'customername'=>'Żółć <script>bad</script>'];
 $rows=[['id'=>1,'time'=>1,'type'=>0,'value'=>-100,'currency'=>'PLN','currencyvalue'=>1,'comment'=>'<img src=x onerror=bad>','fullnumber'=>'FV/1'],

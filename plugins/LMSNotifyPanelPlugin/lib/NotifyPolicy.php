@@ -61,11 +61,15 @@ final class NotifyPolicy
             : ($debt * 100 >= $cents * $s['notify_percent'] ? 'notify' : 'ok');
         return ['state'=>$state,'reason'=>'','base'=>$cents/100,'debt'=>$debt/100,'percent'=>round(100*$debt/$cents,2)];
     }
-    public static function notificationDue(array $c,array $s): bool
+    public static function thresholdDue(array $c,int $percent): bool
     {
         $base=(int)round((float)($c['base']??0)*100);
         $debt=(int)round((float)($c['overdue_debt']??$c['debt']??0)*100);
-        return $base>0 && $debt>0 && $debt*100 >= $base*(int)$s['notify_percent'];
+        return $base>0 && $debt>0 && $debt*100 >= $base*$percent;
+    }
+    public static function notificationDue(array $c,array $s): bool
+    {
+        return self::thresholdDue($c,(int)$s['notify_percent']);
     }
     public static function internetBlockDue(array $c,array $s,array $notice): bool
     {
