@@ -1,6 +1,6 @@
 # Motywy LMS — 2.0.1
 
-Samodzielna wtyczka wyglądu do LMS/LMS+. Pozwala operatorowi dostosować kolory, czcionkę i układ panelu bez edycji plików źródłowych LMS.
+Wtyczka wyglądu do LMS/LMS+. Pozwala operatorowi dostosować kolory, czcionkę i układ panelu bez edycji plików źródłowych LMS.
 
 ## Możliwości
 
@@ -43,8 +43,6 @@ php plugins/LMSThemeSwitcherPlugin/check-install.php
 
 Sprawdzono z LMS 27.80 i PHP 8.2. Wymagany jest nowoczesny mechanizm wtyczek LMS z obsługą hooków Smarty, modułów, menu i uprawnień oraz standardowa powłoka interfejsu LMS. Inne wersje i niestandardowe widoki mogą wymagać dostosowania.
 
-Wtyczka jest niezależna od Huawei GPON. Dostosowany Huawei GPON może automatycznie korzystać z tej samej palety kolorów i działa również bez Motywów LMS. Wtyczki ze sztywno wpisanymi kolorami mogą wymagać poprawek po swojej stronie.
-
 - Ustawienia są lokalne dla konta operatora w danej przeglądarce. Nie przenoszą się automatycznie między komputerami.
 - Przy niedostępnym zapisie w przeglądarce wybór działa w bieżącej karcie.
 - Oryginalny wygląd jest domyślny. Nowe ustawienia układu działają również z oryginalnym motywem.
@@ -55,7 +53,7 @@ Wtyczka jest niezależna od Huawei GPON. Dostosowany Huawei GPON może automatyc
 
 ## Aktualizacja 2.0.1
 
-Wzmocniono różnice pomiędzy gęstościami i objęto nimi pola, przyciski oraz panele. W przykładowej tabeli GPON przy czcionce 15 px wiersze miały około 33 / 56 / 100 px. Rzeczywista wysokość zależy od zawartości i szerokości tabeli. Telefon zachowuje większe obszary dotykowe.
+Wzmocniono różnice pomiędzy gęstościami i objęto nimi pola, przyciski oraz panele. W przykładowej tabeli przy czcionce 15 px wiersze miały około 33 / 56 / 100 px. Rzeczywista wysokość zależy od zawartości i szerokości tabeli. Telefon zachowuje większe obszary dotykowe.
 
 Wersja 2.0 dodała szerokość menu i przyklejone nagłówki. Starszy zapis `compact=true` jest automatycznie zachowywany jako gęstość Kompaktowa.
 
