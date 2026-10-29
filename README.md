@@ -47,13 +47,9 @@ Widoki demonstracyjne przygotowano z szablonów wtyczek z fikcyjnymi danymi. Gal
 
 Pełna wersja udostępnia dodatkowo Auto Find i rejestrację ONT, konfigurację usług i WAN oraz zarządzanie portami LAN i Wi-Fi. Poniższy widok przedstawia pełną wersję; jej kod nie jest częścią tego repozytorium. Szczegóły i pozostałe widoki: [README Huawei](plugins/LMSGponHuaweiDemoPlugin/README.md#pelna-wersja-huawei-gpon).
 
-![Pełna wersja Huawei — WAN i porty LAN, funkcje niedostępne w demo](docs/screenshots/huawei-pelna-ont.jpg)
+![Pełna wersja Huawei — WAN i porty LAN, funkcje niedostępne w demo]
 
 Rejestracja ONT klienta, informacje o urządzeniu i menu pełnej wersji Huawei:
-
-![Pełna wersja Huawei — rejestracja ONT klienta](docs/screenshots/huawei-rejestracja-klienta.jpg)
-
-![Pełna wersja Huawei — informacje o ONT](docs/screenshots/huawei-informacje-ont.jpg)
 
 ![Pełna wersja Huawei — menu wtyczki](docs/screenshots/huawei-menu-pelna.jpg)
 
