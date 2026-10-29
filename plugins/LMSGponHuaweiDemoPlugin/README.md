@@ -83,6 +83,83 @@ Podgląd SSID i liczby połączonych stacji oraz dostęp do ustawień Wi-Fi. Obs
 
 ![Pełna wersja Huawei — Wi-Fi w dwóch pasmach](../../docs/screenshots/huawei-pelna-wifi.jpg)
 
+
+### Galeria pełnej wersji — widoki z instalacji
+
+Poniższe zrzuty zostały przekazane przez autora i przedstawiają widoki pełnej wersji w różnych motywach LMS. Funkcje konfiguracji i sterowania zależą od modelu urządzenia, oprogramowania oraz uprawnień operatora.
+
+#### Historia optyki i ustawienia ONT
+
+Wykres poziomów ONT RX i OLT RX dla okresów 24 godziny, 7 dni i 30 dni oraz dostęp do przypisań LAN/SSID do WAN i service-portów.
+
+![Huawei GPON — Historia optyki i ustawienia ONT](../../docs/screenshots/huawei-full/optyka-historia.jpg)
+
+#### Rejestracja ONT — przebieg operacji
+
+Wybór sieci i wolnego adresu IP komputera LMS, opcjonalne IPTV i porty Ethernet oraz podgląd kolejnych etapów rejestracji ONT.
+
+![Huawei GPON — Rejestracja ONT — przebieg operacji](../../docs/screenshots/huawei-full/rejestracja-postep.jpg)
+
+#### Profile ONT zapisane w LMS
+
+Lista profili rejestracji i konfiguracji WAN z przypisanymi profilami line/service oraz oznaczeniem aktywności.
+
+![Huawei GPON — Profile ONT zapisane w LMS](../../docs/screenshots/huawei-full/profile-ont.jpg)
+
+#### Konfiguracja profilu routera
+
+Dobór OLT i profili Huawei, trybu połączenia, VLAN Internet, NAT oraz opcjonalnych parametrów IPTV. Zapis profilu w LMS nie zmienia istniejących ONT.
+
+![Huawei GPON — Konfiguracja profilu routera](../../docs/screenshots/huawei-full/profil-router.jpg)
+
+#### Service profile na OLT
+
+Odczyt profili z wybranego OLT, liczba powiązanych ONT oraz dostęp do tworzenia i edycji profili.
+
+![Huawei GPON — Service profile na OLT](../../docs/screenshots/huawei-full/service-profile.jpg)
+
+#### Alerty OLT
+
+Historia zdarzeń z filtrowaniem według urządzenia i typu zdarzenia, czasem odbioru, kategorią, opisem i powiązaniem z portem GPON lub ONT.
+
+![Huawei GPON — Alerty OLT](../../docs/screenshots/huawei-full/alerty.jpg)
+
+#### Karty OLT i porty GPON
+
+Inwentaryzacja kart, dane sprzętowe i oprogramowanie, liczba ONT online oraz stan portów, lasera i Auto Find.
+
+![Huawei GPON — Karty OLT i porty GPON](../../docs/screenshots/huawei-full/karty-gpon.jpg)
+
+#### Karty sterujące i uplink
+
+Podgląd kart sterujących i uplink, stanu łączy, modułów i prędkości interfejsów. Zakres sterowania zależy od rozpoznania karty i portu.
+
+![Huawei GPON — Karty sterujące i uplink](../../docs/screenshots/huawei-full/karty-uplink.jpg)
+
+#### Lista ONT i filtrowanie portów
+
+Filtrowanie według OLT, slotu i portu GPON oraz numeru seryjnego, opisu lub ONT ID. Lista portów pokazuje opisy i liczbę ONT.
+
+![Huawei GPON — Lista ONT i filtrowanie portów](../../docs/screenshots/huawei-full/lista-filtry.jpg)
+
+#### Diagnostyka ONT i powiązanie z LMS
+
+Status, optyka, odległość, temperatura, profile i identyfikatory urządzenia oraz powiązanie z klientem i komputerem LMS. Dostępne operacje obejmują restart, ustawienia fabryczne, usunięcie ONT i tablicę MAC.
+
+![Huawei GPON — Diagnostyka ONT i powiązanie z LMS](../../docs/screenshots/huawei-full/szczegoly-ont.jpg)
+
+#### WAN, porty Ethernet i stacje Wi-Fi
+
+Odczyt parametrów WAN, adresacji i VLAN, stanu portów Ethernet oraz połączonych stacji Wi-Fi wraz z poziomem sygnału.
+
+![Huawei GPON — WAN, porty Ethernet i stacje Wi-Fi](../../docs/screenshots/huawei-full/wan-lan-wifi.jpg)
+
+#### Ustawienia LAN i Wi-Fi
+
+Włączanie portów LAN, autonegocjacja i prędkość oraz ustawienia SSID, nowego hasła i szerokości kanału dla pasm 2,4 GHz i 5 GHz. Dostępność funkcji zależy od modelu ONT i oprogramowania.
+
+![Huawei GPON — Ustawienia LAN i Wi-Fi](../../docs/screenshots/huawei-full/ustawienia-lan-wifi.jpg)
+
 ## Wsparcie rozwoju
 
 Jeśli wtyczki są dla Ciebie przydatne, możesz dobrowolnie wesprzeć ich dalszy rozwój:

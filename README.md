@@ -29,7 +29,7 @@ Repozytorium zawiera kod i pliki przykładowe. Konfiguracja instalacji LMS, has�
 
 ## Zrzuty ekranu
 
-Widoki przygotowano z szablonów wtyczek z fikcyjnymi danymi. Nie przedstawiają rzeczywistych klientów ani urządzeń. Wygląd zależy od motywu i wersji LMS.
+Widoki demonstracyjne przygotowano z szablonów wtyczek z fikcyjnymi danymi. Galeria pełnej wersji Huawei GPON zawiera również zrzuty z instalacji przekazane przez autora. Wygląd zależy od motywu i wersji LMS.
 
 ### Płatności i blokady
 
@@ -56,6 +56,18 @@ Rejestracja ONT klienta, informacje o urządzeniu i menu pełnej wersji Huawei:
 ![Pełna wersja Huawei — informacje o ONT](docs/screenshots/huawei-informacje-ont.jpg)
 
 ![Pełna wersja Huawei — menu wtyczki](docs/screenshots/huawei-menu-pelna.jpg)
+
+#### Nowa galeria pełnej wersji Huawei GPON
+
+Dodano 12 zrzutów prezentujących rejestrację ONT z postępem operacji, profile ONT i service profile, karty GPON i uplink, alerty OLT, filtrowanie listy ONT, diagnostykę i powiązanie z LMS, WAN, LAN, Wi-Fi oraz historię optyki.
+
+[Zobacz wszystkie 12 widoków z opisami](plugins/LMSGponHuaweiDemoPlugin/README.md#galeria-pełnej-wersji--widoki-z-instalacji).
+
+![Huawei GPON — karty OLT i porty GPON](docs/screenshots/huawei-full/karty-gpon.jpg)
+
+![Huawei GPON — ustawienia LAN i Wi-Fi](docs/screenshots/huawei-full/ustawienia-lan-wifi.jpg)
+
+![Huawei GPON — historia optyki ONT RX i OLT RX](docs/screenshots/huawei-full/optyka-historia.jpg)
 
 ## Wsparcie rozwoju
 
