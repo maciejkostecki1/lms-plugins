@@ -29,11 +29,15 @@ Repozytorium zawiera kod i pliki przykładowe. Konfiguracja instalacji LMS, has�
 
 ## Zrzuty ekranu
 
-Widoki demonstracyjne przygotowano z szablonów wtyczek z fikcyjnymi danymi. Galeria pełnej wersji Huawei GPON zawiera również zrzuty z instalacji przekazane przez autora. Wygląd zależy od motywu i wersji LMS.
+Widoki demonstracyjne przygotowano z szablonów wtyczek z fikcyjnymi danymi. Galerie zawierają również zrzuty z instalacji przekazane przez autora, w tym kartę klienta testowego wtyczki powiadomień i widoki pełnej wersji Huawei GPON. Wygląd zależy od motywu i wersji LMS.
 
 ### Płatności i blokady
 
 ![Płatności i blokady — przykładowa lista klientów](docs/screenshots/platnosci-lista.jpg)
+
+W karcie klienta dostępne są ręczne powiadomienia e-mail, e-mail z historią i SMS oraz opcjonalne odliczanie do blokady. Potwierdzenie doręczenia SMS jest widoczne niezależnie od odliczania i automatycznej blokady. Zrzut przekazany przez autora przedstawia konto testowe.
+
+![Płatności i blokady — powiadomienia w karcie klienta](docs/screenshots/powiadomienia-karta-klienta.png)
 
 ### Eksport przelewów Erste
 

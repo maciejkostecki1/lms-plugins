@@ -160,6 +160,18 @@ Włączanie portów LAN, autonegocjacja i prędkość oraz ustawienia SSID, nowe
 
 ![Huawei GPON — Ustawienia LAN i Wi-Fi](../../docs/screenshots/huawei-full/ustawienia-lan-wifi.jpg)
 
+### Integracja pełnej wersji GPON z kartą klienta i komputera LMS
+
+W sekcji **Komputery klienta** przy powiązanym urządzeniu ONT pojawia się odnośnik **Przejdź do ONT**, prowadzący do jego szczegółów w pełnej wersji wtyczki Huawei GPON.
+
+![Pełna wersja Huawei GPON — odnośnik do ONT na liście komputerów klienta](../../docs/screenshots/huawei-full/karta-klienta-ont.png)
+
+W karcie komputera panel **ONT Huawei GPON** pokazuje status z inwentaryzacji, ONT ID, poziomy optyczne **ONT RX** i **OLT RX** oraz czas pomiaru. Odnośnik **Przejdź do ONT** pozwala otworzyć szczegóły terminala bez wyszukiwania go na liście ONT. Poniższy widok pokazuje również standardowe dane komputera LMS: sieć, adres IP, MAC i lokalizację.
+
+![Pełna wersja Huawei GPON — status ONT i poziomy optyczne w karcie komputera LMS](../../docs/screenshots/huawei-full/karta-komputera-ont.png)
+
+Te widoki dotyczą pełnej wersji GPON; kod tej wersji nie jest dołączony do pakietu DEMO RO.
+
 ## Wsparcie rozwoju
 
 Jeśli wtyczki są dla Ciebie przydatne, możesz dobrowolnie wesprzeć ich dalszy rozwój:
