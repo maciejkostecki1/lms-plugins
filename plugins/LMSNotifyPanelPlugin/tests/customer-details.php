@@ -13,7 +13,7 @@ if(NotifyCustomerDetails::noteText('<p>Wpłata 25.10</p>Telefon<br>potwierdzony'
 echo "PASS email status states and note line breaks.\n";
 foreach([
     [['action'=>'notify_mail','result'=>'sent','details'=>'Wiadomości LMS: 1'],'Wysłano powiadomienie'],
-    [['action'=>'notify_mail','result'=>'sent','details'=>'Załącznik: historia-platnosci-1.html; SHA256: test'],'Wysłano powiadomienie z historią'],
+    [['action'=>'notify_mail','result'=>'sent','details'=>'Załącznik: historia-platnosci-1.html; SHA256: test'],'Wysłano mail z historią'],
     [['action'=>'invoice_notify-overdue_1','result'=>'sent'],'Wysłano powiadomienie o fakturze'],
     [['result'=>'pending','details'=>'Załącznik: historia-platnosci-1.html; wynik nieznany'],'Wysyłka z historią — wynik do sprawdzenia'],
     [['result'=>'error'],'Błąd wysyłki powiadomienia'],
@@ -22,7 +22,7 @@ foreach([
 echo "PASS ordinary/history/invoice send labels and no false sent label for pending or error.\n";
 
 foreach([
-    [['DELIVERED','EXPIRED'],'Doręczono powiadomienie SMS — co najmniej jeden numer'],
+    [['DELIVERED','EXPIRED'],'Doręczono SMS'],
     [['SENT','QUEUE'],'SMS wysłany lub w kolejce — oczekiwanie na doręczenie'],
     [['EXPIRED','UNDELIVERED'],'Nie doręczono powiadomienia SMS'],
     [[], 'Wysyłka SMS — brak potwierdzenia doręczenia'],

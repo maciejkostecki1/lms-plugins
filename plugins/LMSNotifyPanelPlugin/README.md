@@ -1,4 +1,4 @@
-# Płatności i blokady — LMSNotifyPanelPlugin 0.8.4
+# Płatności i blokady — LMSNotifyPanelPlugin 0.8.5
 
 Wtyczka do LMS+ obsługująca powiadomienia o zadłużeniu, osobne progi blokady internetu i zawieszenia naliczania, powiadomienia o bieżących fakturach oraz historię SMSAPI. Korzysta z mechanizmu wtyczek i metod LMS; nie wymaga edytowania plików źródłowych rdzenia ani wtyczki Huawei.
 
@@ -32,9 +32,11 @@ Ręczne i automatyczne powiadomienia o zadłużeniu to inny mechanizm niż osobn
 ## Funkcje panelu
 
 - „Finanse → Płatności i blokady”: pełna lista klientów, sortowanie przed paginacją, notatki, wyjątki i historia.
+- Tabela pod progami pokazuje: zadłużonych abonamentowo do powiadomienia według ustawionego progu, wszystkich zadłużonych abonamentowo bez progu oraz pozostałych zadłużonych poniżej progu blokady. Licznik do powiadomienia porównuje kwoty w groszach i nie zależy od zaokrąglenia procentu na ekranie.
+- Skrócone komunikaty: „Odliczanie do blokady: Brak.”, „Doręczono SMS” i „Wysłano mail z historią”. Daty wyświetlane są pod komunikatami.
 - Oddzielne liczniki klientów ponad progiem blokady i klientów spełniających obecnie wszystkie warunki blokady. Sama liczba ponad progiem nie jest zleceniem odcięcia usług.
 - Ręczne e-maile, osobna historia płatności w załączniku HTML, pojedyncze SMS-y i zbiorcze SMS-y do klientów bez e-maila. Każda wysyłka wymaga podglądu oraz osobnego, jednorazowego zatwierdzenia.
-- Informacja „Doręczono powiadomienie SMS — co najmniej jeden numer” jest widoczna na liście i w karcie klienta niezależnie od odliczania oraz automatycznych blokad. Osobno pokazano oczekiwanie na raport lub brak doręczenia. Ręczna wysyłka bez zaznaczonego odliczania nie uruchamia licznika.
+- Informacja „Doręczono SMS” jest widoczna na liście i w karcie klienta niezależnie od odliczania oraz automatycznych blokad. Osobno pokazano oczekiwanie na raport lub brak doręczenia. Ręczna wysyłka bez zaznaczonego odliczania nie uruchamia licznika.
 - W karcie klienta: „Powiadom mail”, „Powiadom z historią”, „Powiadom SMS” i jeden wspólny checkbox odliczania. SMS z karty klienta jest dostępny również przy istniejącym e-mailu.
 - Zmiana danych, kontaktów, treści, konfiguracji albo wygaśnięcie potwierdzenia wymaga nowego podglądu. Przed wykonaniem pozycja kolejki ponownie przechodzi kwalifikację.
 - Statystyki SMS obejmują liczbę klientów, numerów i segmentów oraz wycenę według stawki podanej przez administratora. Bez stawki nie zakładają kosztu.
@@ -45,7 +47,7 @@ Ręczne i automatyczne powiadomienia o zadłużeniu to inny mechanizm niż osobn
 
 Panel w karcie klienta udostępnia przyciski **Powiadom mail**, **Powiadom z historią** i **Powiadom SMS** oraz wspólny checkbox **Odliczaj do blokady**. Wysyłka przechodzi przez podgląd i zatwierdzenie.
 
-Komunikat **„Doręczono powiadomienie SMS — co najmniej jeden numer”** informuje operatora o potwierdzonym doręczeniu także wtedy, gdy odliczanie nie zostało zaznaczone lub automatyczna blokada jest wyłączona. Sam komunikat nie uruchamia blokady. Do rozpoczęcia zaznaczonego odliczania wystarczy raport DELIVERED na jeden z numerów klienta.
+Komunikat **„Doręczono SMS”** informuje operatora o potwierdzonym doręczeniu także wtedy, gdy odliczanie nie zostało zaznaczone lub automatyczna blokada jest wyłączona. Sam komunikat nie uruchamia blokady. Do rozpoczęcia zaznaczonego odliczania wystarczy raport DELIVERED na jeden z numerów klienta.
 
 Poniższy zrzut z konta testowego został przekazany przez autora.
 

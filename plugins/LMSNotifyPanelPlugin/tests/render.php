@@ -60,7 +60,7 @@ echo "PASS native customer selector slot and explicit exception form owner.\n";
 $tab='customers';$preview=null;$bulkPreview=null;
 $rows[0]['customer_notes']="Deklaracja wpłaty 25.10\n<script>alert('notes')</script>";
 $rows[0]['customer_info']='SMS: czas na wpłatę do 17.06 <script>bad</script>';
-$rows[0]['notification_status']='Wysłano powiadomienie z historią';$rows[0]['notification_time']=time();
+$rows[0]['notification_status']='Wysłano mail z historią';$rows[0]['notification_time']=time();
 $rows[0]['last_note']='Telefon: potwierdzono termin';$rows[0]['last_note_time']=time();$rows[0]['email_status']='Brak e-maila';
 ob_start();require __DIR__.'/../views/panel.php';$detailsHtml=ob_get_clean();
 if(strpos($detailsHtml,'Deklaracja wpłaty 25.10')===false || strpos($detailsHtml,'SMS: czas na wpłatę do 17.06')===false || strpos($detailsHtml,'<script>bad</script>')!==false || strpos($detailsHtml,'Brak e-maila')===false || strpos($detailsHtml,'Telefon: potwierdzono termin')===false || strpos($detailsHtml,"<script>alert('notes')</script>")!==false)throw new RuntimeException('Customer notes/email rendering failed');

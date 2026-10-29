@@ -23,7 +23,7 @@ final class NotifyCustomerDetails
     {
         if(($event['action']??'')==='notify_sms'){
             $states=$event['sms_states']??[];
-            if(in_array('DELIVERED',$states,true))return 'Doręczono powiadomienie SMS — co najmniej jeden numer';
+            if(in_array('DELIVERED',$states,true))return 'Doręczono SMS';
             if(array_intersect($states,['QUEUE','ACCEPTED','SENT','RENEWAL']))return 'SMS wysłany lub w kolejce — oczekiwanie na doręczenie';
             if($states)return 'Nie doręczono powiadomienia SMS';
             return 'Wysyłka SMS — brak potwierdzenia doręczenia';
@@ -32,7 +32,7 @@ final class NotifyCustomerDetails
         if(($event['result']??'')==='pending')return $history?'Wysyłka z historią — wynik do sprawdzenia':'Wysyłka powiadomienia — wynik do sprawdzenia';
         if(($event['result']??'')==='error')return $history?'Błąd wysyłki z historią':'Błąd wysyłki powiadomienia';
         if(($event['result']??'')!=='sent')return '';
-        if($history)return 'Wysłano powiadomienie z historią';
+        if($history)return 'Wysłano mail z historią';
         if(strpos((string)($event['action']??''),'invoice_')===0)return 'Wysłano powiadomienie o fakturze';
         return 'Wysłano powiadomienie';
     }

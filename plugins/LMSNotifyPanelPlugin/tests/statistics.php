@@ -70,3 +70,10 @@ verify(!hash_equals($hash,$np->smsPreviewHash($rows[0],$s)),'saved rate change i
 
 $below=$rows;$below[0]['debt']=199.99;$below[0]['percent']=199.99;
 $limited=$np->manualPreview($s,true,$below);verify(!in_array(1,array_column($limited['rows'],'id'),true),'bulk preview omits SMS customer below configured threshold');
+
+$notifyRows=$rows;
+$notifyRows[0]['debt']=199.99;$notifyRows[0]['percent']=200;
+$notifyRows[1]['debt']=200;$notifyRows[1]['percent']=200;
+$notifyRows[2]['debt']=199.99;$notifyRows[2]['percent']=200;
+$notifyStats=$np->customerStatistics($notifyRows,NotifyPolicy::defaults(),['enabled'=>false]);
+verify($notifyStats['notify_threshold']===63 && $notifyStats['debtors']===65,'notification counter uses exact threshold while unfiltered debt count stays unchanged');

@@ -7,7 +7,7 @@ final class NotifyBlockNotice
     public function __construct($db){$this->db=$db instanceof NotifyDb?$db:new NotifyDb($db);}
     public static function evaluate(?array $notice,string $cycle,float $debt,int $days,int $now,array $statuses,array $smsStates=[]): array
     {
-        $result=['ready'=>false,'sent_at'=>0,'due_at'=>0,'reason'=>'Brak aktywnego odliczania dla bieżącego zadłużenia.'];
+        $result=['ready'=>false,'sent_at'=>0,'due_at'=>0,'reason'=>'Brak.'];
         if($debt<=0.009){$result['reason']='Brak długu abonamentowego.';return $result;}
         if($days===0){$result['ready']=true;$result['reason']='Odliczanie wyłączone — obowiązuje próg zadłużenia.';return $result;}
         if(!$notice || !in_array($notice['origin']??'legacy',['automatic','manual'],true) || $cycle==='' || $notice['cycle_key']!==$cycle)return $result;
