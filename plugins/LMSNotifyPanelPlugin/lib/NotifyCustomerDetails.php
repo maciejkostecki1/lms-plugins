@@ -21,6 +21,13 @@ final class NotifyCustomerDetails
     }
     public static function notificationStatus(array $event): string
     {
+        if(($event['action']??'')==='notify_sms'){
+            $states=$event['sms_states']??[];
+            if(in_array('DELIVERED',$states,true))return 'Doręczono powiadomienie SMS — co najmniej jeden numer';
+            if(array_intersect($states,['QUEUE','ACCEPTED','SENT','RENEWAL']))return 'SMS wysłany lub w kolejce — oczekiwanie na doręczenie';
+            if($states)return 'Nie doręczono powiadomienia SMS';
+            return 'Wysyłka SMS — brak potwierdzenia doręczenia';
+        }
         $history=strpos((string)($event['details']??''),'Załącznik: historia-platnosci-')===0;
         if(($event['result']??'')==='pending')return $history?'Wysyłka z historią — wynik do sprawdzenia':'Wysyłka powiadomienia — wynik do sprawdzenia';
         if(($event['result']??'')==='error')return $history?'Błąd wysyłki z historią':'Błąd wysyłki powiadomienia';

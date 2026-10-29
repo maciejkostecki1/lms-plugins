@@ -1,4 +1,4 @@
-# Płatności i blokady — LMSNotifyPanelPlugin 0.8.3
+# Płatności i blokady — LMSNotifyPanelPlugin 0.8.4
 
 Wtyczka do LMS+ obsługująca powiadomienia o zadłużeniu, osobne progi blokady internetu i zawieszenia naliczania, powiadomienia o bieżących fakturach oraz historię SMSAPI. Korzysta z mechanizmu wtyczek i metod LMS; nie wymaga edytowania plików źródłowych rdzenia ani wtyczki Huawei.
 
@@ -24,7 +24,7 @@ Inne wersje LMS wymagają sprawdzenia schematu bazy i używanych metod. Wtyczka 
 - Opłaty jednorazowe nie powiększają abonamentowej podstawy progów. Wpłaty przypisane do dokumentu rozliczane są na ten dokument, pozostałe FIFO. Nie przepisuje to księgowań w LMS.
 - Przy odliczaniu 0 dni obowiązuje procentowy próg blokady. Przy ustawieniu 7–365 dni zastosowanie mają istniejące reguły skutecznego ostrzeżenia i upływu pełnych dób.
 - Wspólny checkbox „Odliczaj do blokady” jest domyślnie odznaczony. Jawnie wybrane ręczne odliczanie może doprowadzić do zlecenia blokady po terminie także przy wyłączonym `auto_block`; nie jest to tylko opis wiadomości.
-- Kolejka SMSAPI nie uruchamia odliczania. Wymagane jest SENT/DELIVERED dla wszystkich numerów danej wysyłki, aktualny dług i ten sam cykl zadłużenia. Późniejszy negatywny status powiązanego numeru uniemożliwia użycie ostrzeżenia.
+- Kolejka SMSAPI i status SENT nie uruchamiają odliczania. Od wersji 0.8.4 wystarczy raport DELIVERED na co najmniej jeden numer danej wysyłki, aktualny dług i ten sam cykl zadłużenia. Błąd lub oczekiwanie na drugim numerze nie unieważnia potwierdzonego doręczenia na pierwszy. Kolejne doręczenia nie przesuwają początku odliczania.
 - Niepełne dane, nierozpoznane obciążenia lub okresy, obca waluta, wyjątki i ochrona LMS mogą wyłączyć działania. Odblokowanie dotyczy urządzeń i zobowiązań objętych rejestrem tej wtyczki.
 
 Ręczne i automatyczne powiadomienia o zadłużeniu to inny mechanizm niż osobne profile faktur bieżących. Próg 200% nie zastępuje terminów i warunków tych profili faktur.
@@ -34,6 +34,7 @@ Ręczne i automatyczne powiadomienia o zadłużeniu to inny mechanizm niż osobn
 - „Finanse → Płatności i blokady”: pełna lista klientów, sortowanie przed paginacją, notatki, wyjątki i historia.
 - Oddzielne liczniki klientów ponad progiem blokady i klientów spełniających obecnie wszystkie warunki blokady. Sama liczba ponad progiem nie jest zleceniem odcięcia usług.
 - Ręczne e-maile, osobna historia płatności w załączniku HTML, pojedyncze SMS-y i zbiorcze SMS-y do klientów bez e-maila. Każda wysyłka wymaga podglądu oraz osobnego, jednorazowego zatwierdzenia.
+- Informacja „Doręczono powiadomienie SMS — co najmniej jeden numer” jest widoczna na liście i w karcie klienta niezależnie od odliczania oraz automatycznych blokad. Osobno pokazano oczekiwanie na raport lub brak doręczenia. Ręczna wysyłka bez zaznaczonego odliczania nie uruchamia licznika.
 - W karcie klienta: „Powiadom mail”, „Powiadom z historią”, „Powiadom SMS” i jeden wspólny checkbox odliczania. SMS z karty klienta jest dostępny również przy istniejącym e-mailu.
 - Zmiana danych, kontaktów, treści, konfiguracji albo wygaśnięcie potwierdzenia wymaga nowego podglądu. Przed wykonaniem pozycja kolejki ponownie przechodzi kwalifikację.
 - Statystyki SMS obejmują liczbę klientów, numerów i segmentów oraz wycenę według stawki podanej przez administratora. Bez stawki nie zakładają kosztu.

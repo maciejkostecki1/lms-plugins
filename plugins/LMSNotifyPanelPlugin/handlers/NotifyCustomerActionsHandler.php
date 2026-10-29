@@ -13,7 +13,9 @@ class NotifyCustomerActionsHandler
         $customer=(int)($data['customerinfo']['id']??0);if($customer<1)return $data;
         global $DB,$LMS;
         try{
-            $settings=(new NotifyPanel($DB,$LMS,(int)Auth::GetCurrentUser()))->settings();
+            $np=new NotifyPanel($DB,$LMS,(int)Auth::GetCurrentUser());
+            $settings=$np->settings();
+            $notification=$np->notificationInfo($customer);
             $sms=(new NotifySmsSettings($DB))->settings();
             if(session_status()===PHP_SESSION_NONE)session_start();
             if(session_status()!==PHP_SESSION_ACTIVE)return $data;

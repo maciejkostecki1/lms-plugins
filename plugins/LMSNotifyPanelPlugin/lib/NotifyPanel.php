@@ -104,6 +104,21 @@ final class NotifyPanel
         $c['sms_ready']=!empty($c['smsnotice']) && (bool)array_filter($smsContacts,static fn($v)=>NotifySmsApi::normalizeNumber($v)!==null);
         return $c;
     }
+    public function notificationInfo(int $customer): array
+    {
+        $event=$this->db->GetRow('SELECT created_at,action,result,details FROM lnp_history WHERE customerid=? AND (action IN (?,?) OR action LIKE ?) AND result IN (?,?,?) ORDER BY created_at DESC,id DESC LIMIT 1',[$customer,'notify_mail','notify_sms','invoice_notify-%','sent','pending','error'])?:[];
+        return ['status'=>$this->notificationEventStatus($event,$customer),'time'=>(int)($event['created_at']??0)];
+    }
+    private function notificationEventStatus(array $event,int $customer): string
+    {
+            if(($event['action']??'')==='notify_sms' && preg_match('/Wiadomości LMS: ([0-9, ]+)/',$event['details']??'',$matches)){
+                $messageIds=array_values(array_filter(array_map('intval',explode(',',$matches[1]))));
+                if($messageIds){
+                    $event['sms_states']=array_column($this->db->GetAll('SELECT d.gateway_status FROM lnp_sms_delivery d JOIN messageitems m ON m.id=d.itemid WHERE m.customerid=? AND m.messageid IN ?',[$customer,$messageIds])?:[],'gateway_status');
+                }
+            }
+        return NotifyCustomerDetails::notificationStatus($event);
+    }
     public function customerListDetails(array $rows): array
     {
         if(!$rows)return [];
@@ -115,7 +130,7 @@ final class NotifyPanel
         foreach($rows as &$c){
             $c['block_notice']=$blockStatuses[(int)$c['id']];
             $c=$this->customerDetails($c);$event=$events[(int)$c['id']]??[];
-            $c['notification_status']=NotifyCustomerDetails::notificationStatus($event);
+            $c['notification_status']=$this->notificationEventStatus($event,(int)$c['id']);
             $c['notification_time']=(int)($event['created_at']??0);
             $c['notification_result']=$event['result']??'';
         }unset($c);
@@ -414,8 +429,8 @@ final class NotifyPanel
                 // Partial delivery is not retried blindly, to avoid duplicating successful recipients.
                 $this->db->Execute('UPDATE lnp_history SET result=?,details=? WHERE id=?',
                     [$allOk?'sent':'pending',$attachmentNote.'Wiadomości LMS: '.implode(', ',$messageIds).($allOk?' — przyjęte do wysyłki.':' — częściowy błąd, sprawdź LMS.'),$event]);
-                if($countdownOrigin!==null && $allOk && $confirmed)(new NotifyBlockNotice($this->db))->record($c,$s,$event,$messageItems,time(),$countdownOrigin);
-                if($channel==='sms' && $countdownOrigin!==null && $allOk && !$confirmed){
+                if($channel!=='sms' && $countdownOrigin!==null && $allOk && $confirmed)(new NotifyBlockNotice($this->db))->record($c,$s,$event,$messageItems,time(),$countdownOrigin);
+                if($channel==='sms' && $countdownOrigin!==null && $messageItems){
                     $delivery=new NotifySmsDelivery($this->db);$delivery->pendingNotice($c,$event,$messageItems,$countdownOrigin);
                     $delivery->reconcile($id,$this);
                 }
