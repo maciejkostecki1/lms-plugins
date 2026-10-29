@@ -6,6 +6,9 @@ $n=0;
 function check($ok,$label) { global $n; if(!$ok) throw new RuntimeException('FAIL '.$label); ++$n; echo 'PASS '.$label.PHP_EOL; }
 $s=NotifyPolicy::defaults();
 $monthly=[['currency'=>'PLN','sum'=>100]];
+foreach([[199.99,false],[200.0,true],[200.01,true]] as [$debt,$expected])check(NotifyPolicy::notificationDue(['base'=>100,'debt'=>$debt,'overdue_debt'=>$debt],$s)===$expected,'manual threshold boundary '.$debt);
+check(!NotifyPolicy::notificationDue(['base'=>100,'debt'=>400,'overdue_debt'=>0],$s),'not-yet-due debt does not qualify for manual sending');
+check(!NotifyPolicy::notificationDue(['base'=>10000,'debt'=>19999.99,'percent'=>200],$s),'rounded display percentage cannot bypass threshold');
 foreach([[-199.99,'ok'],[-200,'notify'],[-299.99,'notify'],[-300,'block'],[0,'ok'],[100,'ok']] as [$balance,$state]) {
     check(NotifyPolicy::decision($balance,$monthly,$s)['state']===$state,'granica salda '.$balance);
 }

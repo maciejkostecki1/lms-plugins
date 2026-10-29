@@ -22,12 +22,14 @@ try {
             $installDb->Execute(file_get_contents(__DIR__.'/../sql/upgrade-0.7.2.pgsql.sql'));
             $installDb->Execute(file_get_contents(__DIR__.'/../sql/upgrade-0.7.3.pgsql.sql'));
             $installDb->Execute(file_get_contents(__DIR__.'/../sql/upgrade-0.8.0.pgsql.sql'));
+            $installDb->Execute(file_get_contents(__DIR__.'/../sql/upgrade-0.8.1.pgsql.sql'));
             $installDb->CommitTrans();
         } catch(Throwable $e) { $installDb->RollbackTrans(); throw $e; }
         echo "Schemat wtyczki gotowy; ustawienia automatyki zachowano.\n"; exit;
     }
     $AUTH=null; $SYSLOG=SYSLOG::getInstance();
     $LMS=new LMS($DB,$AUTH,$SYSLOG);
+    $LMS->setPluginManager(LMSPluginManager::getInstance());
     $np=new NotifyPanel($DB,$LMS,0); $s=$np->settings(); $after=0; $errors=0;
     do {
         $rows=$np->customers($after,100);

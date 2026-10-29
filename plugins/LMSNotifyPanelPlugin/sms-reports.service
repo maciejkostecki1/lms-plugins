@@ -1,0 +1,14 @@
+[Unit]
+Description=LMS SMSAPI delivery reports collector
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/var/www/html/lms
+ExecStart=/usr/bin/php /var/www/html/lms/plugins/LMSNotifyPanelPlugin/bin/sms-reports.php --config-file=/etc/lms/lms.ini --quiet --run
+UMask=0077
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true

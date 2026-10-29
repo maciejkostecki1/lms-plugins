@@ -1,0 +1,11 @@
+[Unit]
+Description=Collect SMSAPI delivery reports every minute
+
+[Timer]
+OnBootSec=30s
+OnUnitActiveSec=60s
+RandomizedDelaySec=5s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -125,11 +125,15 @@ try {
     $api->balance=0;
     try{$np->act(1,'unblock',$s['revision']);throw new LogicException('manual suspension ignored');}catch(RuntimeException $ex){verify(true,'manual suspension prevents automatic restore');}
     verify((int)$DB->GetOne('SELECT access FROM nodes WHERE id=11')===0,'failed billing restore leaves device blocked');
-    // Manual sending covers any positive subscription debt, while automatic thresholds stay intact.
+    // All manual channels obey the same notification threshold as automatic sending.
     $DB->Execute('DELETE FROM lnp_history WHERE customerid=1 AND action IN (?,?)',['notify_mail','notify_sms']);
-    $api->balance=-50;$before=$api->deliveries;
+    $api->balance=-199.99;$before=$api->deliveries;
     try{$np->act(1,'notify',$s['revision']);throw new LogicException('Automatic threshold bypassed');}catch(RuntimeException $e){verify(true,'automatic notification still requires percentage threshold');}
-    $np->act(1,'notify_manual',$s['revision']);verify($api->deliveries===$before+1,'manual notification below 200 percent uses fake sender');
+    foreach(['notify_manual','notify_history','notify_sms','notify_sms_no_mail'] as $action){
+        try{$np->act(1,$action,$s['revision']);throw new LogicException('Below-threshold manual action accepted');}catch(RuntimeException $e){verify($api->deliveries===$before,'below threshold rejected before sender: '.$action);}
+    }
+    $api->balance=-200;
+    $np->act(1,'notify_manual',$s['revision']);verify($api->deliveries===$before+1,'manual notification accepted exactly at 200 percent');
     $np->act(1,'notify_manual',$s['revision']);verify($api->deliveries===$before+1,'manual cooldown prevents duplicate');
     $api->balance=0;
     try{$np->act(1,'notify_manual',$s['revision']);throw new LogicException('Paid customer notified');}catch(RuntimeException $e){verify(true,'manual notification refuses paid customer');}
@@ -139,7 +143,7 @@ try {
     $DB->Execute('CREATE TEMP TABLE vcustomerassignments(customerid integer,customergroupid integer)');
     $DB->Execute('CREATE TEMP TABLE excludedgroups(userid integer,customergroupid integer)');
     $DB->Execute('DELETE FROM lnp_history WHERE customerid=1 AND action=?',['notify_mail']);
-    $api->balance=-50;$c=$np->inspect(1);$attachment=NotifyPaymentHistory::build($DB,$c);$before=$api->deliveries;
+    $api->balance=-200;$c=$np->inspect(1);$attachment=NotifyPaymentHistory::build($DB,$c);$before=$api->deliveries;
     try{$np->act(1,'notify_history',$s['revision'],'invalid');throw new LogicException('Stale attachment sent');}catch(RuntimeException $e){verify($api->deliveries===$before,'changed attachment refuses delivery');}
     $noticesBeforeHistory=$DB->GetAll('SELECT * FROM lnp_block_notices');
     $np->act(1,'notify_history',$s['revision'],$attachment['hash']);

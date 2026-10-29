@@ -1,19 +1,33 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/NotifySmsCompany.php';
 
 final class NotifySmsApi
 {
+    public static function normalizeNumber(string $number): ?string
+    {
+        if(!preg_match('/^\+?[0-9 ()-]+$/D',$number))return null;
+        $number=preg_replace('/[ ()+\-]/','',$number);
+        if(strlen($number)===9)$number='48'.$number;
+        return preg_match('/^48[0-9]{9}$/D',$number)?$number:null;
+    }
     public static function send(string $number, string $message, string $messageId, array $options, ?callable $transport=null): array
     {
         $fail=static fn(string $error): array=>['status'=>MSG_ERROR,'errors'=>[$error]];
         if (empty($options['enabled'])) return $fail('SMSAPI: integracja jest wyłączona.');
         $token=trim((string)($options['token']??''));
         if ($token==='' || preg_match('/[\r\n]/',$token)) return $fail('SMSAPI: brak poprawnego tokenu API.');
-        $number=preg_replace('/[^0-9]/','',$number);
-        if (!preg_match('/^48[0-9]{9}$/D',$number)) return $fail('SMSAPI: wymagany polski numer z prefiksem 48.');
+        $number=self::normalizeNumber($number);
+        if ($number===null) return $fail('SMSAPI: wymagany polski numer z prefiksem 48.');
         if (trim($message)==='') return $fail('SMSAPI: pusta wiadomość.');
+        if (!NotifySmsCompany::fitsOneSms($message))return $fail('SMSAPI: przekroczony limit jednej części SMS.');
         $params=['to'=>$number,'message'=>$message,'format'=>'json','encoding'=>'utf-8',
             'idx'=>hash('sha256','lms-smsapi-'.$messageId.'-'.$number),'check_idx'=>1,'details'=>1,'max_parts'=>1];
+        if(isset($options['idx']) && preg_match('/^[a-f0-9]{64}$/D',$options['idx']))$params['idx']=$options['idx'];
+        if(!empty($options['notify_url'])){
+            if(!preg_match('~^https://[a-zA-Z0-9.-]+/[a-zA-Z0-9/_.-]+$~D',(string)$options['notify_url']))return $fail('SMSAPI: nieprawidłowy adres raportów.');
+            $params['notify_url']=(string)$options['notify_url'];
+        }
         if (!empty($options['dry_run'])) $params['test']=1;
         if (!empty($options['sender'])) $params['from']=(string)$options['sender'];
         try {
@@ -40,7 +54,7 @@ final class NotifySmsApi
             $item=$items[0];$state=strtoupper((string)$item['status']);
             if (!empty($options['dry_run'])) return ['status'=>MSG_NEW,'id'=>(string)$item['id'],'dry_run'=>true,'errors'=>[]];
             // Acceptance by the gateway is not delivery and must not start a blocking countdown.
-            if (!in_array($state,['QUEUE','ACCEPTED','SENT','DELIVERED'],true)) return $fail('SMSAPI: status '.$state.'.');
+            if (!in_array($state,['QUEUE','ACCEPTED','SENT','DELIVERED'],true)) return $fail('SMSAPI: niepotwierdzony status operatora.');
             return ['status'=>$state==='DELIVERED'?MSG_DELIVERED:($state==='SENT'?MSG_SENT:MSG_NEW),
                 'id'=>(string)$item['id'],'gateway_status'=>$state,'errors'=>[]];
         } catch (Throwable $ex) {

@@ -19,3 +19,8 @@ id_ed25519*
 /tmp/
 .DS_Store
 Thumbs.db
+
+# Prywatna konfiguracja i kolejka odbiornika SMSAPI
+smsapi-relay.json
+reports.sqlite*
+/plugins/LMSNotifyPanelPlugin/relay/config-location.php

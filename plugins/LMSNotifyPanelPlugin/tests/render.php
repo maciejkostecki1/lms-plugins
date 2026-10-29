@@ -5,6 +5,7 @@ date_default_timezone_set('Europe/Warsaw');
 $settings=NotifyPolicy::defaults(); $settings['revision']=1;
 $error='';$notice='Podgląd demonstracyjny — fikcyjne dane. Przyciski nie wykonują operacji.';$preview=null;$search=0;$history=[];
 $_SESSION=['lnp_csrf'=>'demo'];
+$statistics=['debtors'=>57,'block'=>15,'remaining'=>42,'invalid_messages'=>0,'sms'=>['customers'=>20,'numbers'=>21,'segments'=>21,'rate'=>'0.08','cost'=>1.68]];
 $rows=[];
 foreach([[1001,'Anna Kowalska',100,-200],[1002,'Firma Przykładowa',150,-450],[1003,'Jan Nowak',80,0],[1004,'Klient bez abonamentu',0,-100]] as [$id,$name,$base,$balance]) {
     $c=['id'=>$id,'customername'=>$name,'balance'=>$balance,'excluded'=>false,'exception'=>'','owned_blocks'=>0,'mail_ready'=>true,'no_email'=>false,'sms_ready'=>false];
@@ -13,6 +14,7 @@ foreach([[1001,'Anna Kowalska',100,-200],[1002,'Firma Przykładowa',150,-450],[1
 $e=static function($v) {return htmlspecialchars((string)$v,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');};
 ob_start(); require __DIR__.'/../views/panel.php'; $html=ob_get_clean();
 if(strpos($html,'200%')===false || strpos($html,'300%')===false || strpos($html,'Do blokady')===false) throw new RuntimeException('Missing UI content');
+if(strpos($html,'Zadłużeni abonamentowo')===false || strpos($html,'1,68 zł')===false || strpos($html,'lnp-statistics')>strpos($html,'name="op" value="bulk_preview"'))throw new RuntimeException('Missing global statistics above send buttons');
 preg_match('/<style>(.*?)<\/style>/s',$html,$panelStyle);
 if(preg_match('/#[0-9a-fA-F]{3,8}\b/',$panelStyle[1]??'')) throw new RuntimeException('Panel must inherit LMS colours');
 if(preg_match('/<button(?![^>]*class="lms-ui-button)/',$html)) throw new RuntimeException('Non-native button style');
@@ -89,7 +91,7 @@ $settings['block_after_days']=7;ob_start();require __DIR__.'/../views/panel.php'
 if(preg_match('/name="start_countdown"[^>]*(checked|disabled)/',$enabledHtml))throw new RuntimeException('Manual countdown must be enabled but unchecked at seven days');
 echo "PASS independent manual countdown controls default off and respect zero days.\n";
 
-$preview=null;$bulkPreview=null;$tab='customers';$rows=[$rows[0]];$rows[0]['excluded']=false;$rows[0]['state']='notify';$rows[0]['debt']=100;
+$preview=null;$bulkPreview=null;$tab='customers';$rows=[$rows[0]];$rows[0]['excluded']=false;$rows[0]['state']='notify';$rows[0]['debt']=200;
 foreach([[true,false,true,'notify_sms_no_mail'],[false,true,false,'notify_manual'],[false,false,false,'none']] as [$noEmail,$mailReady,$smsReady,$wanted]){
  $rows[0]['no_email']=$noEmail;$rows[0]['mail_ready']=$mailReady;$rows[0]['sms_ready']=$smsReady;
  ob_start();require __DIR__.'/../views/panel.php';$html=ob_get_clean();
@@ -101,5 +103,13 @@ foreach([[true,false,true,'notify_sms_no_mail'],[false,true,false,'notify_manual
 echo 'PASS SMS without email, email/history only with valid permissions; no email actions without consent'.PHP_EOL;
 
 $tab='settings';ob_start();require __DIR__.'/../views/panel.php';$allSettings=ob_get_clean();
-foreach(['Ustawienia wtyczki','Bramka SMSAPI','name="token" value=""','Test połączenia — bez wysyłki SMS','name="sms_body"','Wspólna godzina wysyłki'] as $needle)if(strpos($allSettings,$needle)===false)throw new RuntimeException('Missing unified setting '.$needle);
+foreach(['Ustawienia wtyczki','Bramka SMSAPI','name="token" value=""','Test połączenia — bez wysyłki SMS','name="sms_body"'] as $needle)if(strpos($allSettings,$needle)===false)throw new RuntimeException('Missing unified setting '.$needle);
 echo 'PASS unified plugin settings, blank token field and no-send connection test'.PHP_EOL;
+
+if(strpos($allSettings,'name="op" value="invoice_settings"')!==false || strpos($allSettings,'name="send_time"')!==false)throw new RuntimeException('Invoice settings leaked into debt settings');
+$invoiceProfiles=[['label'=>'Faktura przed terminem','schedule'=>'Wyłączone','section'=>'notify-reminder','enabled'=>false,'type'=>'reminder','days'=>2,'sender_email'=>'test@example.invalid','sender_name'=>'Test','subject'=>'Faktura %invoice','message'=>'Kwota %value']];
+$currentInvoices=[];$invoiceSendTime='09:30';$tab='invoices';
+ob_start();require __DIR__.'/../views/panel.php';$invoiceHtml=ob_get_clean();
+foreach(['name="op" value="invoice_settings"','name="op" value="invoice_schedule"','value="09:30"','Faktura %invoice','Bieżące faktury — podgląd bez wysyłki'] as $needle)if(strpos($invoiceHtml,$needle)===false)throw new RuntimeException('Missing invoice setting '.$needle);
+foreach(['class="lmsbox lnp-summary"','name="block_percent"','name="sms_body"','name="token"'] as $needle)if(strpos($invoiceHtml,$needle)!==false)throw new RuntimeException('Debt setting leaked into invoices '.$needle);
+echo 'PASS separate invoice tab contains templates, schedule and invoice list; debt settings remain separate'.PHP_EOL;

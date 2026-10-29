@@ -6,7 +6,7 @@ final class NotifySmsSettings
 {
     private NotifyDb $db;
     public function __construct($db){$this->db=new NotifyDb($db);}
-    public static function defaults(): array{return ['enabled'=>false,'sender'=>'Test','test_number'=>'','allow_manual_sms'=>false,'allow_customer_sms'=>false];}
+    public static function defaults(): array{return ['enabled'=>false,'sender'=>'Test','test_number'=>'','allow_manual_sms'=>false,'allow_customer_sms'=>false,'segment_rate'=>null,'callback_url'=>''];}
     private function row(): array
     {
         $row=$this->db->GetRow('SELECT payload,token,revision FROM lnp_sms_settings WHERE id=1');
@@ -26,8 +26,14 @@ final class NotifySmsSettings
         $s['test_number']=preg_replace('/[ ()+\-]/','',(string)($input['test_number']??''));
         if(strlen($s['test_number'])===9)$s['test_number']='48'.$s['test_number'];
         if($s['test_number']!=='' && !preg_match('/^48[0-9]{9}$/D',$s['test_number']))throw new InvalidArgumentException('Podaj polski numer testowy z prefiksem +48.');
-        // Automated customer SMS remains blocked independently of panel notification switches.
-        $s['allow_customer_sms']=false;
+        $rate=str_replace(',','.',trim((string)($input['segment_rate']??'')));
+        if($rate!==''){
+            if(!preg_match('/^\d{1,4}(?:\.\d{1,6})?$/D',$rate))throw new InvalidArgumentException('Nieprawidłowa stawka za segment SMS.');
+            $s['segment_rate']=$rate;
+        }
+        $s['allow_customer_sms']=!empty($input['allow_customer_sms']);
+        $s['callback_url']=trim((string)($input['callback_url']??''));
+        if($s['callback_url']!=='' && (strlen($s['callback_url'])>500 || !preg_match('~^https://[a-zA-Z0-9.-]+/[a-zA-Z0-9/_.-]+$~D',$s['callback_url'])))throw new InvalidArgumentException('Nieprawidłowy adres HTTPS raportów SMS.');
         return $s;
     }
     public function save(array $input,int $user): void
@@ -43,18 +49,19 @@ final class NotifySmsSettings
             if($s['enabled'] && $token==='')throw new InvalidArgumentException('Włączona integracja wymaga tokenu.');
             if($row)$this->db->Execute('UPDATE lnp_sms_settings SET payload=?,token=?,revision=revision+1 WHERE id=1',[json_encode($s,JSON_THROW_ON_ERROR),$token]);
             else $this->db->Execute('INSERT INTO lnp_sms_settings(id,payload,token,revision) VALUES(1,?,?,1)',[json_encode($s,JSON_THROW_ON_ERROR),$token]);
-            $this->db->Execute('INSERT INTO lnp_history(created_at,customerid,action,result,details,userid) VALUES(?,0,?,?,?,?)',[time(),'smsapi_settings','saved','Zmieniono ustawienia bramki SMSAPI; automatyczne SMS wyłączone.',$user]);
+            $this->db->Execute('INSERT INTO lnp_history(created_at,customerid,action,result,details,userid) VALUES(?,0,?,?,?,?)',[time(),'smsapi_settings','saved','Zmieniono ustawienia bramki SMSAPI; automatyczne SMS: '.($s['allow_customer_sms']?'włączone':'wyłączone').'.',$user]);
             $this->db->CommitTrans();
         }catch(Throwable $e){$this->db->RollbackTrans();throw $e;}
     }
     public function send(string $number,string $body,string $id,array $options=[]): array
     {
-        $s=$this->settings();$number=preg_replace('/[^0-9]/','',$number);
+        $s=$this->settings();$number=NotifySmsApi::normalizeNumber($number)??'';
         $test=!empty($options['lnp_test']) && $s['test_number']!=='' && hash_equals($s['test_number'],$number);
         $manual=!empty($options['lnp_manual']) && $s['allow_manual_sms'];
-        if(!$test && !$manual)return ['status'=>MSG_ERROR,'errors'=>['SMSAPI: wysyłka automatyczna do klientów jest wyłączona.']];
+        $automatic=!empty($options['lnp_automatic']) && $s['allow_customer_sms'];
+        if(!$test && !$manual && !$automatic)return ['status'=>MSG_ERROR,'errors'=>['SMSAPI: ten rodzaj wysyłki jest wyłączony.']];
         $row=$this->row();
-        return NotifySmsApi::send($number,$body,$id,['enabled'=>$s['enabled'],'token'=>$row['token'],'sender'=>$s['sender'],'dry_run'=>$test && !empty($options['lnp_dry_run'])]);
+        return NotifySmsApi::send($number,$body,$id,['enabled'=>$s['enabled'],'token'=>$row['token'],'sender'=>$s['sender'],'notify_url'=>$s['callback_url'],'idx'=>$options['lnp_idx']??null,'dry_run'=>$test && !empty($options['lnp_dry_run'])]);
     }
     public function test(): string
     {
