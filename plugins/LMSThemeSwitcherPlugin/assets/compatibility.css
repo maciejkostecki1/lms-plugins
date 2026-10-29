@@ -1,0 +1,81 @@
+/* Screen-only compatibility: LMS 27.x and Huawei GPON. No layout/action changes. */
+html[data-lms-compat] {
+    --lt-success: #d9f5e0; --lt-danger: #ffe0e0; --lt-warning: #fff0c2; --lt-info: #ddeaff;
+}
+html[data-lms-theme="grey"] { --lt-hover: #656565; --lt-stripe: #5c5c5c; }
+html:is([data-lms-theme="lightgrey"],[data-lms-theme="mono"],[data-lms-theme="blue"],[data-lms-theme="modern"],[data-lms-theme="pigeon"]) {
+    --lt-success: #216431; --lt-danger: #922525; --lt-warning: #725200; --lt-info: #245482;
+}
+html[data-lms-theme="manual"][data-lms-manual-tone="light"] {
+    --lt-success: #216431; --lt-danger: #922525; --lt-warning: #725200; --lt-info: #245482;
+}
+html[data-lms-theme="manual"][data-lms-manual-tone="light"] .xdsoft_datetimepicker :is(.xdsoft_prev,.xdsoft_next,.xdsoft_today_button) { filter:none; }
+html:is([data-lms-theme="lightgrey"],[data-lms-theme="mono"],[data-lms-theme="blue"],[data-lms-theme="modern"],[data-lms-theme="pigeon"])[data-lms-compat] .xdsoft_datetimepicker :is(.xdsoft_prev,.xdsoft_next,.xdsoft_today_button) { filter: none; }
+/* LMS table sections, div-based detail tabs, notices and form widgets. */
+html[data-lms-compat] #lms-ui-module-view :is(thead,tfoot,.light,.lucid,.superlight,.fall,.lms-ui-tab-table-row,.lms-ui-tab-header,.lms-ui-tab-content,.lms-ui-message-quote,.lms-ui-multiline-box,.lms-ui-category-label) {
+    background-color: var(--lt-surface) !important; color: var(--lt-text); border-color: var(--lt-border);
+}
+html[data-lms-compat] #lms-ui-module-view :is(thead,tfoot,.lms-ui-tab-table-row.header,.lms-ui-tab-table-row.footer,.lms-ui-tab-header) { background-color: var(--lt-header) !important; }
+html[data-lms-compat] #lms-ui-module-view :is(tbody,.empty-table,.dataTables_empty,.lms-ui-box,.lms-ui-box-nested-box,.lms-ui-box-row,.ui-selectmenu-button,.select2-selection,.select2-selection__choice,.ui-tabs-tab) {
+    background: var(--lt-surface) !important; color: var(--lt-text) !important; border-color: var(--lt-border) !important;
+}
+html[data-lms-compat] #lms-ui-module-view table > tbody > tr { background-color: var(--lt-surface) !important; }
+html[data-lms-compat] #lms-ui-module-view table > tbody > tr:nth-child(even),
+html[data-lms-compat] #lms-ui-module-view .lms-ui-box-row:nth-child(even) { background-color: var(--lt-stripe) !important; }
+html[data-lms-compat] #lms-ui-module-view :is(.dark,.lms-ui-button-panel,.lms-ui-box-footer,.lms-ui-box-header-multi-row,.dataTables_wrapper .top,.dataTables_wrapper .bottom) {
+    background: var(--lt-header) !important; color: var(--lt-text); border-color: var(--lt-border) !important;
+}
+html[data-lms-compat] #lms-ui-module-view :is(.lms-ui-label,.lms-ui-disabled,.disabled,label.disabled,.dataTables_wrapper .paginate_button.disabled) { color: var(--lt-muted) !important; }
+html[data-lms-compat] #lms-ui-module-view .dataTables_wrapper .paginate_button { color: var(--lt-text) !important; background: var(--lt-header) !important; border-color: var(--lt-border) !important; }
+html[data-lms-compat] #lms-ui-module-view .superdark { background: var(--lt-header) !important; color: var(--lt-text) !important; }
+html[data-lms-compat] #lms-ui-module-view .dataTables_wrapper :is(label,.dataTables_info,.dataTables_length,.dataTables_filter) { color: var(--lt-text) !important; }
+html[data-lms-compat] #lms-ui-module-view input:disabled + label { color: var(--lt-muted) !important; }
+html[data-lms-compat] :is(#lms-ui-module-view,#lms-ui-tool-panels) :is(.lms-ui-multiselect-launcher,.lms-ui-multiselect-list li,.scombobox-list) { background: var(--lt-surface) !important; color: var(--lt-text) !important; border-color: var(--lt-border) !important; }
+html[data-lms-compat] #lms-ui-module-view .lms-ui-tab-button-panel { background: var(--lt-header) !important; color: var(--lt-text); border-color: var(--lt-border); }
+html[data-lms-compat] #lms-ui-module-view :is([class^="lms-ui-customer-status-"],[class*=" lms-ui-customer-status-"]) { color: var(--lt-text); }
+html[data-lms-compat] :is(#lms-ui-module-view,.select2-container) .select2-selection__placeholder { color: var(--lt-muted) !important; }
+html[data-lms-compat] #lms-ui-module-view :is(.about-to-expire,.warning,.yellow,.lms-ui-warning) { color: var(--lt-warning) !important; }
+html[data-lms-compat] #lms-ui-module-view .lms-ui-tab-table-row:hover { background-color: var(--lt-hover) !important; }
+html[data-lms-compat] :is(#lms-ui-module-view,#lms-ui-tool-panels) :is(button,.lms-ui-button,.lms-ui-button .lms-ui-label,input[type="button"],input[type="submit"],input[type="reset"]) {
+    color: var(--lt-text) !important; background-color: var(--lt-header); border-color: var(--lt-border);
+}
+html[data-lms-compat] #lms-ui-module-view :is(button,a.lms-ui-button,a.hg-action,a.button) :is(i,[class*="lms-ui-icon-"]),
+html[data-lms-compat] #lms-ui-module-view :is(button,a.lms-ui-button,a.hg-action,a.button) :is(i,[class*="lms-ui-icon-"])::before { color: inherit !important; }
+html[data-lms-compat] :is(#lms-ui-module-view,#lms-ui-tool-panels) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),textarea,select) {
+    color: var(--lt-text) !important; background-color: var(--lt-surface) !important; border-color: var(--lt-border) !important;
+}
+html[data-lms-compat] :is(#lms-ui-module-view,#lms-ui-tool-panels) :is(.blend,.lms-ui-hint,.lms-ui-description,small),
+html[data-lms-compat] #lms-ui-generation-time { color: var(--lt-muted); }
+html[data-lms-compat] :is(.ui-dialog,.ui-datepicker,.ui-datepicker-header,.ui-menu,.ui-tooltip,.lms-ui-popup,.lms-ui-popup-menu,.select2-dropdown,.select2-results,.chosen-drop,.chosen-results,.scombobox-list,.lms-ui-multiselect-list) {
+    background: var(--lt-surface) !important; color: var(--lt-text) !important; border-color: var(--lt-border) !important;
+}
+html[data-lms-compat] :is(.ui-dialog-titlebar,.ui-dialog-buttonpane,.ui-dialog-content,.ui-datepicker td a,.ui-menu-item-wrapper,.select2-results__option,.chosen-results li,.scombobox-list li) {
+    background-color: var(--lt-surface) !important; color: var(--lt-text) !important; border-color: var(--lt-border) !important;
+}
+html[data-lms-compat] :is(.ui-state-hover,.ui-state-active,.select2-results__option--highlighted,.chosen-results li.highlighted) { background-color: var(--lt-hover) !important; color: var(--lt-text) !important; }
+html[data-lms-compat] :is(.xdsoft_datetimepicker,.xdsoft_datetimepicker .xdsoft_datepicker,.xdsoft_datetimepicker .xdsoft_timepicker,.xdsoft_datetimepicker .xdsoft_label,.xdsoft_datetimepicker .xdsoft_monthpicker,.xdsoft_datetimepicker .xdsoft_calendar th,.xdsoft_datetimepicker .xdsoft_calendar td,.xdsoft_datetimepicker .xdsoft_time_box,.xdsoft_datetimepicker .xdsoft_time,.xdsoft_datetimepicker .xdsoft_select,.xdsoft_datetimepicker .xdsoft_option) {
+    background: var(--lt-surface) !important; color: var(--lt-text) !important; border-color: var(--lt-border) !important;
+}
+html[data-lms-compat] .xdsoft_datetimepicker :is(.xdsoft_current,.xdsoft_option:hover,.xdsoft_calendar td:hover,.xdsoft_time:hover) {
+    background: var(--lt-header) !important; color: var(--lt-text) !important; box-shadow: inset 0 0 0 1px var(--lt-muted) !important;
+}
+html[data-lms-compat] .xdsoft_datetimepicker .xdsoft_other_month { color: var(--lt-muted) !important; opacity: 1; }
+html[data-lms-compat] .xdsoft_datetimepicker :is(.xdsoft_prev,.xdsoft_next,.xdsoft_today_button) { filter: invert(1); }
+html[data-lms-compat] #lms-ui-module-view :is(.ui-slider,.ui-slider-range) { background: var(--lt-header); border-color: var(--lt-border); }
+html[data-lms-compat] #lms-ui-module-view .ui-slider-handle { background: var(--lt-muted); border-color: var(--lt-border); }
+/* Marked by a small inline-color adapter. Markers do nothing in original/light
+   themes or on paper, and never change a value, a form action or a font. */
+html[data-lms-compat] [data-lms-surface="panel"] { background-color: var(--lt-surface) !important; background-image: none !important; }
+html[data-lms-compat] [data-lms-ink="text"] { color: var(--lt-text) !important; }
+html[data-lms-compat] [data-lms-ink="muted"] { color: var(--lt-muted) !important; }
+html[data-lms-compat] [data-lms-ink="success"] { color: var(--lt-success) !important; }
+html[data-lms-compat] [data-lms-ink="danger"] { color: var(--lt-danger) !important; }
+html[data-lms-compat] [data-lms-ink="warning"] { color: var(--lt-warning) !important; }
+html[data-lms-compat] [data-lms-ink="info"] { color: var(--lt-info) !important; }
+
+html[data-lms-compat] #lms-ui-module-view .lms-ui-message-sent { color:var(--lt-muted) !important; }
+html[data-lms-compat] #lms-ui-module-view :is(.ui-slider,.ui-slider-range) { color:var(--lt-text) !important; }
+html[data-lms-compat] #lms-ui-module-view :is(.green,.lms-ui-message-delivered) { color:var(--lt-success) !important; }
+html[data-lms-compat] #lms-ui-module-view :is(.red,.alert,.lms-ui-message-error,.lms-ui-message-bounced) { color:var(--lt-danger) !important; }
+html[data-lms-compat] #lms-ui-module-view .orange { color:var(--lt-warning) !important; }
+html[data-lms-compat] #lms-ui-module-view .blue { color:var(--lt-info) !important; }
