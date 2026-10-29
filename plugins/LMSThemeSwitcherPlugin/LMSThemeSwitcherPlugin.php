@@ -5,7 +5,7 @@ class LMSThemeSwitcherPlugin extends LMSPlugin
     const PLUGIN_DIRECTORY_NAME = 'LMSThemeSwitcherPlugin';
     const PLUGIN_NAME = 'Motywy LMS';
     const PLUGIN_DESCRIPTION = 'Dwanaście motywów LMS, własne kolory w trybie ręcznym i tryb kompaktowy';
-    const PLUGIN_SOFTWARE_VERSION = '2.0.1';
+    const PLUGIN_SOFTWARE_VERSION = '2.0.2';
     const PLUGIN_AUTHOR = 'NET-24h';
 
     public function registerHandlers()

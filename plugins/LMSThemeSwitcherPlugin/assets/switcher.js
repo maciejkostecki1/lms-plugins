@@ -101,18 +101,19 @@
     }
     function refreshLayout() {
         updateStickyOffset();
-        if(!document.body || !state.sticky)return;
+        if(!document.body)return;
+        document.querySelectorAll('#lms-ui-module-view [data-lms-sticky-row],#lms-ui-module-view [data-lms-table-scroll]').forEach(e=>{e.removeAttribute('data-lms-sticky-row');e.removeAttribute('data-lms-table-scroll');});
+        if(!state.sticky)return;
         document.querySelectorAll('#lms-ui-module-view table').forEach(table=>{
             if(table.closest('.tox,[contenteditable="true"],.data-template-message-area') || table.querySelector('table'))return;
             const row=table.tHead?.rows[0] || (table.rows[0]?.querySelector('th') ? table.rows[0] : null);
             if(!row)return;
             row.setAttribute('data-lms-sticky-row','');
-            for(let parent=table.parentElement;parent && parent.id!=='lms-ui-module-view';parent=parent.parentElement){
+            const parent=table.parentElement;
+            // Only an existing table-only scroll wrapper may be height-limited.
+            if(parent && parent.id!=='lms-ui-module-view' && parent.children.length===1 && parent.firstElementChild===table){
                 const style=getComputedStyle(parent);
-                if(/auto|scroll|hidden/.test(style.overflowX+' '+style.overflowY)){
-                    parent.setAttribute('data-lms-table-scroll','');
-                    break;
-                }
+                if(/auto|scroll/.test(style.overflowX+' '+style.overflowY))parent.setAttribute('data-lms-table-scroll','');
             }
         });
     }

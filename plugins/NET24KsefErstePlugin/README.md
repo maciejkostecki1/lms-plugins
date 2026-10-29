@@ -1,4 +1,4 @@
-# Eksport przelewów KSeF do Erste
+# Eksport przelewów KSeF do Erste — 1.0.0
 
 Wtyczka `NET24KsefErstePlugin` dodaje do LMS pozycję **Finanse → Przelewy KSeF → ERSTE**. Generuje plik TXT z wybranych faktur zakupowych KSeF, także z opcjonalnym mechanizmem podzielonej płatności (MPP).
 
@@ -9,7 +9,7 @@ Wtyczka `NET24KsefErstePlugin` dodaje do LMS pozycję **Finanse → Przelewy KSe
 - PHP zgodne z używaną wersją LMS, rozszerzenia `mbstring` i `iconv`.
 - Operator przypisany do odpowiedniego podmiotu w LMS i posiadający uprawnienie `ksef_payment_export`.
 
-Wtyczka nie importuje faktur KSeF i nie dostarcza migracji tabel LMS/KSeF. W kodzie nie zadeklarowano numeru wersji wtyczki.
+Wtyczka nie importuje faktur KSeF i nie dostarcza migracji tabel LMS/KSeF. Od wydania 1.0.0 wtyczka deklaruje numer wersji.
 
 ## Instalacja
 
@@ -33,16 +33,29 @@ Poniższe ścieżki zakładają LMS w `/var/www/html/lms`; dostosuj je do swojej
    sender_nrb_1 = "UZUPELNIJ_26_CYFROWYM_NRB"
    ```
 
-   Zastąp `1` rzeczywistym identyfikatorem podmiotu z LMS. Dla kolejnych podmiotów dodaj `sender_nrb_2` itd. Wartość musi być poprawnym polskim NRB: 26 cyfr, bez prefiksu `PL`. Powyższy tekst jest znacznikiem do zastąpienia, nie działającym numerem rachunku. Nie dodawaj własnego `lms.ini` ani wygenerowanych przelewów do repozytorium.
+   Zastąp `1` rzeczywistym identyfikatorem podmiotu z LMS. Dla kolejnych podmiotów dodaj `sender_nrb_2` itd. Wartość musi być poprawnym polskim rachunkiem NRB (26 cyfr); akceptowany jest też prefiks `PL`. Przed eksportem rachunek normalizowany jest do NRB i sprawdzany MOD97. Powyższy tekst jest znacznikiem do zastąpienia, nie działającym numerem rachunku. Nie dodawaj własnego `lms.ini` ani wygenerowanych przelewów do repozytorium.
 
 ## Sprawdzenie działania
 
 1. Otwórz **Finanse → Przelewy KSeF → ERSTE**.
 2. Wybierz podmiot i daty wystawienia faktur. Domyślny zakres to poprzedni miesiąc.
 3. Sprawdź faktury, rachunki odbiorców i adresy. Wybierz faktury oraz ewentualnie MPP. Eksport obejmuje pełną kwotę brutto wskazanych dokumentów, nie wylicza pozostałej kwoty po częściowych wpłatach.
-4. Pobierz TXT i sprawdź dane w podglądzie importu banku przed zatwierdzeniem jakiejkolwiek płatności. Sam eksport nie zleca przelewów i nie oznacza faktur jako rozliczonych w LMS.
+4. Przygotuj podgląd przelewów i sprawdź odbiorców, rachunki, adresy, MPP, liczbę dokumentów oraz sumę pełnych kwot brutto. Następnie osobno potwierdź pobranie TXT i sprawdź plik w podglądzie importu banku przed zatwierdzeniem jakiejkolwiek płatności. Sam eksport nie zleca przelewów i nie oznacza faktur jako rozliczonych w LMS.
 
-Lista ma limit 200 dokumentów i obejmuje PLN, dodatnie kwoty oraz rachunki spełniające walidację. Format pliku: Windows-1250, zakończenia wierszy CRLF, separator `|`. MPP wymaga także prawidłowego NIP i kwoty VAT.
+Strona listy zawiera do 200 poprawnych dokumentów i ma przyciski paginacji. Walidacja następuje przed podziałem na strony; odrzucone rekordy nie zajmują miejsca poprawnym. Lista obejmuje PLN, dodatnie kwoty oraz rachunki spełniające walidację. Liczba pominięć dotyczy przeskanowanego zakresu. Format pliku: Windows-1250, zakończenia wierszy CRLF, separator `|`. MPP wymaga także prawidłowego NIP i kwoty VAT.
+
+## Bezpieczne przygotowanie eksportu
+
+- „Wszystkie nierozliczone” pomija faktury rozliczone. Można wybrać je pojedynczo, ale pobranie wymaga osobnego potwierdzenia ryzyka ponownej płatności.
+- Rachunki, kwoty, odbiorcy, stan rozliczenia i rachunek nadawcy są powiązane z listą oraz zatwierdzonym podglądem. Zmiana danych wymaga nowego podglądu. Potwierdzenie jest jednorazowe i wygasa po 10 minutach, a lista po 15 minutach.
+- Adres jest wymagany tylko dla zaznaczonych dokumentów, także po stronie serwera. Błąd nie zastępuje adresu kropką.
+- Sesja operatora zapamiętuje ostatnie pobrania i ostrzega o ich powtórzeniu. Jest to lokalna pomoc, **nie pełny rejestr przelewów ani dowód zapłaty**; po zakończeniu sesji nie zastępuje historii banku.
+- Wybrane faktury są pobierane grupowo. Eksport wciąż nie zmienia żadnego księgowania ani pola rozliczenia i nie komunikuje się z bankiem.
+- Aktualizacja nie wymaga migracji bazy. Po podmianie plików odśwież stronę i przygotuj nowy podgląd; stare formularze nie mogą pobrać TXT bez nowego potwierdzenia.
+
+## Testy
+
+`php tests/workflow.php` sprawdza normalizację rachunków, walidację adresów i kwot, podgląd, jednorazowe potwierdzenie, zmianę danych, rozliczone dokumenty, historię pobrań i paginację. Używa wyłącznie fikcyjnych faktur i atrap bazy/sesji. Nie wykonuje przelewów i nie łączy się z produkcyjną bazą. Format pliku i kwoty należy nadal sprawdzić w podglądzie banku.
 
 ## Rozwiązywanie problemów
 
