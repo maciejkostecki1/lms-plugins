@@ -31,7 +31,7 @@ final class NotifySmsCompany
     }
     public static function message(int $division,int $days,float $debt,?string $template=null): string
     {
-        $signatures=[1=>'Net-24h Maciej Kostecki',2=>'Meganecik'];
+        $signatures=[1=>'Firma Przykladowa',2=>'Firma Przykladowa 2'];
         if(!isset($signatures[$division]))throw new RuntimeException('Brak podpisu SMS dla podmiotu klienta.');
         if(!is_finite($debt) || $debt<=0)throw new RuntimeException('Brak poprawnej kwoty zadluzenia SMS.');
         $amount=number_format($debt,2,',','');

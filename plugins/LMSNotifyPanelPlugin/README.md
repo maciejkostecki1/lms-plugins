@@ -20,7 +20,7 @@ Inne wersje LMS wymagają sprawdzenia schematu bazy i używanych metod. Wtyczka 
 
 - Procent zadłużenia to niezapłacony abonament po upływie całego terminu faktury względem miesięcznych opłat cyklicznych brutto po rabatach.
 - Domyślne progi: powiadomienie 200%, blokada procentowa 300%, zawieszenie naliczania 400%. Progi są konfigurowalne.
-- **Od 0.8.3 próg powiadomienia obowiązuje także wszystkie ręczne SMS-y i e-maile:** pojedyncze, zbiorcze i wiadomości z historią płatności. Porównanie wykonywane jest w groszach; zaokrąglony procent wyświetlany w tabeli nie pozwala ominąć progu.
+- Próg powiadomienia nadal obowiązuje dla ręcznych e-maili, wiadomości z historią i wysyłki zbiorczej. Pojedynczy ręczny SMS można przygotować przy dodatnim zadłużeniu po terminie, z zachowaniem kontroli zgody, kontaktu i ustawień wysyłki. Rozpoczęcie odliczania wybiera się podczas potwierdzenia powiadomienia.
 - Opłaty jednorazowe nie powiększają abonamentowej podstawy progów. Wpłaty przypisane do dokumentu rozliczane są na ten dokument, pozostałe FIFO. Nie przepisuje to księgowań w LMS.
 - Przy odliczaniu 0 dni obowiązuje procentowy próg blokady. Przy ustawieniu 7–365 dni zastosowanie mają istniejące reguły skutecznego ostrzeżenia i upływu pełnych dób.
 - Wspólny checkbox „Odliczaj do blokady” jest domyślnie odznaczony. Jawnie wybrane ręczne odliczanie może doprowadzić do zlecenia blokady po terminie także przy wyłączonym `auto_block`; nie jest to tylko opis wiadomości.

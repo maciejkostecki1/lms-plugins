@@ -2,7 +2,7 @@
 if(PHP_SAPI!=='cli'){http_response_code(403);exit;}
 
 require_once __DIR__.'/../lib/NotifySmsCompany.php';
-foreach([1=>'Net-24h Maciej Kostecki',2=>'Meganecik'] as $id=>$signature){
+foreach([1=>'Firma Przykladowa',2=>'Firma Przykladowa 2'] as $id=>$signature){
  $text=NotifySmsCompany::message($id,7,285.40);
  if(substr($text,-strlen($signature))!==$signature || strpos($text,'7 dni')===false || strlen($text)>160 || preg_match('/[^\x20-\x7e]/',$text))throw new RuntimeException('Bad company message');
  echo 'PASS signature '.$signature.'; single SMS: '.strlen($text).' characters'.PHP_EOL;
@@ -22,7 +22,7 @@ echo NotifySmsCompany::message(1,7,285).' ('.strlen(NotifySmsCompany::message(1,
 echo NotifySmsCompany::message(2,7,100).' ('.strlen(NotifySmsCompany::message(2,7,100)).' chars)'.PHP_EOL;
 
 $custom='Dlug: %debt zl. %company';
-if(NotifySmsCompany::message(2,7,12.34,$custom)!=='Dlug: 12,34 zl. Meganecik')throw new RuntimeException('Custom template ignored');
+if(NotifySmsCompany::message(2,7,12.34,$custom)!=='Dlug: 12,34 zl. Firma Przykladowa 2')throw new RuntimeException('Custom template ignored');
 foreach(['%company','%debt','%debt %company %unknown'] as $bad){try{NotifySmsCompany::validateTemplate($bad);throw new LogicException('Bad template accepted');}catch(InvalidArgumentException $e){}}
 foreach([[str_repeat('A',160),true],[str_repeat('A',161),false],[str_repeat('^',80),true],[str_repeat('^',81),false],[str_repeat('ą',70),true],[str_repeat('ą',71),false]] as [$text,$ok])if(NotifySmsCompany::fitsOneSms($text)!==$ok)throw new RuntimeException('SMS encoding length mismatch');
 echo 'PASS editable template, required amount/signature, unknown tokens and GSM/Unicode SMS limits'.PHP_EOL;

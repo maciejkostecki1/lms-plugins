@@ -23,7 +23,7 @@ checkSms($before===$called,'oversized message and letters in number rejected bef
 checkSms(NotifySmsApi::normalizeNumber('500 000 000')==='48500000000','local Polish number normalized');
 $custom=str_repeat('a',64);NotifySmsApi::send('48500000000','Test','custom',$options+['idx'=>$custom],$transport);
 checkSms($params['idx']===$custom,'durable callback and deduplication key forwarded');
-$url='https://net-24h.pl/smsapi-reports/receive.php';
+$url='https://example.invalid/smsapi-reports/receive.php';
 NotifySmsApi::send('48500000000','Test','callback',$options+['notify_url'=>$url,'dry_run'=>true],$transport);
 checkSms($params['notify_url']===$url && $params['test']===1,'per-message callback configured even in no-send API validation');
 $before=$called;NotifySmsApi::send('48500000000','Test','callback-invalid',$options+['notify_url'=>'http://example.invalid/receiver.php'],$transport);

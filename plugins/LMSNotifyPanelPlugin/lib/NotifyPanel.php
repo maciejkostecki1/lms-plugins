@@ -211,7 +211,9 @@ final class NotifyPanel
             if (!$c || $c['excluded'] || $c['state']==='review') throw new RuntimeException('Klient wyłączony z działań lub wymaga weryfikacji.');
             if (in_array($action,['notify','notify_manual','notify_history','notify_sms_no_mail','notify_sms'],true)) {
                 if(in_array($action,['notify_manual','notify_history','notify_sms_no_mail','notify_sms'],true) && (float)$c['debt']<=0.009)throw new RuntimeException('Brak długu abonamentowego.');
-                if(!NotifyPolicy::notificationDue($c,$s))throw new RuntimeException('Zadłużenie po terminie jest poniżej progu powiadomienia '.$s['notify_percent'].'%. Próg obowiązuje także ręczne SMS-y i e-maile.');
+                $isManualSms=in_array($action,['notify_sms','notify_sms_no_mail'],true);
+                if($isManualSms && !$automatic)$s['notify_percent']=0;
+                if(!NotifyPolicy::notificationDue($c,$s))throw new RuntimeException('Brak zadłużenia po terminie lub nieosiągnięty próg powiadomienia.');
                 if(in_array($action,['notify_sms_no_mail','notify_sms'],true)){
                     if($automatic)throw new RuntimeException('SMS bez e-maila wymaga ręcznego zatwierdzenia.');
                     if($action==='notify_sms_no_mail' && $this->hasEmailContact($id))return 'Bez wysyłki: klient ma wpisany adres e-mail.';
@@ -400,7 +402,8 @@ final class NotifyPanel
             $account=$this->previewData!==null?($this->previewData['customers'][(int)$c['id']]['account']??null):$this->db->GetOne('SELECT d.account FROM customers c LEFT JOIN divisions d ON d.id=c.divisionid WHERE c.id=?',[$c['id']]);
             $c['bankaccount']=format_bankaccount(bankaccount($c['id'],$account));
         }
-        $message=['subject'=>NotifyPolicy::render($s['subject'],$c),'body'=>NotifyPolicy::render($s['body'],$c)];
+        $paymentDays=(int)$s['block_after_days'];
+        $message=['subject'=>NotifyPolicy::render($s['subject'],$c,$paymentDays),'body'=>NotifyPolicy::render($s['body'],$c,$paymentDays)];
         if(in_array('sms',$s['channels'],true)){
             $division=$this->previewData!==null?(int)($this->previewData['customers'][(int)$c['id']]['divisionid']??0):(int)$this->db->GetOne('SELECT divisionid FROM customers WHERE id=?',[$c['id']]);
             $message['sms_body']=NotifySmsCompany::message($division,(int)$s['block_after_days'],(float)$c['debt'],$s['sms_body']);

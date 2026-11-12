@@ -9,7 +9,7 @@ Wtyczka `NET24KsefErstePlugin` dodaje do LMS pozycję **Finanse → Przelewy KSe
 - PHP zgodne z używaną wersją LMS, rozszerzenia `mbstring` i `iconv`.
 - Operator przypisany do odpowiedniego podmiotu w LMS i posiadający uprawnienie `ksef_payment_export`.
 
-Wtyczka nie importuje faktur KSeF i nie dostarcza migracji tabel LMS/KSeF. Od wydania 1.0.0 wtyczka deklaruje numer wersji.
+Wtyczka korzysta z zaimportowanych faktur KSeF. Rejestr eksportów ma własną tabelę i nie zmienia tabel faktur ani płatności.
 
 ## Instalacja
 
@@ -46,12 +46,12 @@ Strona listy zawiera do 200 poprawnych dokumentów i ma przyciski paginacji. Wal
 
 ## Bezpieczne przygotowanie eksportu
 
-- „Wszystkie nierozliczone” pomija faktury rozliczone. Można wybrać je pojedynczo, ale pobranie wymaga osobnego potwierdzenia ryzyka ponownej płatności.
+- Zaznaczenie zbiorcze pomija faktury opłacone i wcześniej wyeksportowane. Opłacone faktury są zablokowane; ponowny eksport nieopłaconej faktury wymaga ręcznego zaznaczenia i potwierdzenia.
 - Rachunki, kwoty, odbiorcy, stan rozliczenia i rachunek nadawcy są powiązane z listą oraz zatwierdzonym podglądem. Zmiana danych wymaga nowego podglądu. Potwierdzenie jest jednorazowe i wygasa po 10 minutach, a lista po 15 minutach.
-- Adres jest wymagany tylko dla zaznaczonych dokumentów, także po stronie serwera. Błąd nie zastępuje adresu kropką.
-- Sesja operatora zapamiętuje ostatnie pobrania i ostrzega o ich powtórzeniu. Jest to lokalna pomoc, **nie pełny rejestr przelewów ani dowód zapłaty**; po zakończeniu sesji nie zastępuje historii banku.
+- Adres odbiorcy jest opcjonalny. Pusty adres jest widoczny w podglądzie jako kropka, zgodnie z generowanym TXT.
+- Kolumna **Eksport TXT** pokazuje datę ostatniego zarejestrowanego eksportu. Rejestr jest wspólny dla operatorów danego podmiotu i pozostaje po wylogowaniu. Eksporty sprzed migracji mogą nie mieć zapisu. Status nie potwierdza zapisania pliku ani zapłaty.
 - Wybrane faktury są pobierane grupowo. Eksport wciąż nie zmienia żadnego księgowania ani pola rozliczenia i nie komunikuje się z bankiem.
-- Aktualizacja nie wymaga migracji bazy. Po podmianie plików odśwież stronę i przygotuj nowy podgląd; stare formularze nie mogą pobrać TXT bez nowego potwierdzenia.
+- Przed użyciem zainstaluj [migrację PostgreSQL](database/export-status.pgsql.sql) w bazie LMS. Konto LMS potrzebuje SELECT, INSERT i UPDATE do tej tabeli. Następnie odśwież listę i przygotuj nowy podgląd.
 
 ## Testy
 
@@ -66,7 +66,7 @@ Strona listy zawiera do 200 poprawnych dokumentów i ma przyciski paginacji. Wal
 
 ## Aktualizacja i wyłączenie
 
-Przed aktualizacją zachowaj kopię katalogu i konfiguracji. Po podmianie kodu odśwież autoloader. Wyłączenie wtyczki w LMS usuwa jej stronę z użycia; nie cofa plików wcześniej zaimportowanych do banku. Wtyczka nie ma własnego schematu bazy ani zadań cron.
+Przed aktualizacją zachowaj kopię katalogu i konfiguracji. Po podmianie kodu odśwież autoloader. Wyłączenie wtyczki w LMS usuwa jej stronę z użycia; nie cofa plików wcześniej zaimportowanych do banku. Zachowaj tabelę rejestru, aby zachować statusy po ponownej instalacji.
 
 ## Zrzut ekranu
 

@@ -10,12 +10,12 @@ if(!is_callable($smarty->filter) || empty($_SESSION['lnp_csrf']))throw new Runti
 $customer=2256;$csrf='demo-token';$e=static fn($v)=>htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');
 $settings=['block_after_days'=>7];$sms=['enabled'=>true,'allow_manual_sms'=>true];
 ob_start();require __DIR__.'/../views/customer-actions.php';$panel=ob_get_clean();
-foreach(['Powiadom mail','Powiadom z historią','Powiadom SMS','Odliczaj do blokady','name="csrf"','name="op" value="preview"'] as $text)if(strpos($panel,$text)===false)throw new RuntimeException('Missing customer action: '.$text);
-if(substr_count($panel,'name="start_countdown"')!==1 || strpos($panel,'checked')!==false)throw new RuntimeException('Countdown must be shared and default off');
+foreach(['Powiadom mail','Powiadom z historią','Powiadom SMS','name="csrf"','name="op" value="preview"'] as $text)if(strpos($panel,$text)===false)throw new RuntimeException('Missing customer action: '.$text);
+if(strpos($panel,'name="start_countdown"')!==false)throw new RuntimeException('Countdown must be chosen on the confirmation screen');
 $html='<div id="customerinfo-sortable"><table>Original LMS card</table></div>';
 $result=NotifyCustomerActionsHandler::inject($html,$panel);
 if(strpos($result,'Original LMS card')===false || substr_count($result,'id="lnp-customer-notifications"')!==1)throw new RuntimeException('Card injection failed');
 if(NotifyCustomerActionsHandler::inject($result,$panel)!==$result)throw new RuntimeException('Duplicate card panel');
-$settings['block_after_days']=0;ob_start();require __DIR__.'/../views/customer-actions.php';$disabled=ob_get_clean();
-if(!preg_match('/name="start_countdown"[^>]*disabled/',$disabled))throw new RuntimeException('Zero days must disable checkbox');
-echo 'PASS plugin-only customer card, three preview actions, one shared unchecked countdown and idempotent insertion.'.PHP_EOL;
+$sms['allow_manual_sms']=false;ob_start();require __DIR__.'/../views/customer-actions.php';$disabled=ob_get_clean();
+if(strpos($disabled,'disabled title="Ręczne SMS-y')===false)throw new RuntimeException('Disabled SMS must be marked on customer card');
+echo 'PASS plugin-only customer card, three preview actions and idempotent insertion.'.PHP_EOL;

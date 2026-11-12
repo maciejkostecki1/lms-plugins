@@ -1,5 +1,10 @@
 # Zmiany
 
+## Aktualizacja 0.8.6 — 12.11.2026
+
+- Podgląd ręcznych e-maili i wybór rozpoczęcia odliczania w oknie potwierdzenia.
+- Ręczny SMS można przygotować przy dodatnim zadłużeniu po terminie. Próg ręcznych e-maili i automatyki pozostaje bez zmian.
+
 ## 0.8.6 — 29.10.2026
 
 - Odcisk odbiorców i treści wszystkich ręcznych e-maili, również z historią i w kolejce.

@@ -1,7 +1,7 @@
 <div id="lnp-sms-preview" style="align-self:stretch;min-width:0">
 <p id="lnp-sms-template-count" role="status" aria-live="polite"></p>
 <label><span>Przykładowa kwota zadłużenia (zł)</span><input id="lnp-sms-example-debt" type="number" min="0.01" step="0.01" value="285.00"></label>
-<?php foreach([1=>'Net-24h Maciej Kostecki',2=>'Meganecik'] as $companyId=>$companyName): ?>
+<?php foreach([1=>'Firma Przykladowa',2=>'Firma Przykladowa 2'] as $companyId=>$companyName): ?>
 <h4><?= $e($companyName) ?> — podgląd SMS</h4>
 <pre id="lnp-sms-preview-<?= $companyId ?>" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre>
 <p id="lnp-sms-count-<?= $companyId ?>" role="status" aria-live="polite"></p>
@@ -10,7 +10,7 @@
 <script>
 (()=>{
     const template=document.getElementById('lnp-sms-template'),amount=document.getElementById('lnp-sms-example-debt'),days=document.querySelector('[name="block_after_days"]');
-    const companies={1:'Net-24h Maciej Kostecki',2:'Meganecik'};
+    const companies={1:'Firma Przykladowa',2:'Firma Przykladowa 2'};
     const extension=new Set(Array.from('^{}\\[~]|€\f'));
     const extra=new Set(Array.from('£¥èéùìòÇØøÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ¤¡ÄÖÑÜ§¿äöñüà'));
     const measure=text=>{

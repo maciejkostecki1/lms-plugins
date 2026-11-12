@@ -5,6 +5,4 @@
 <?php foreach(['notify_manual'=>'Powiadom mail','notify_history'=>'Powiadom z historią','notify_sms'=>'Powiadom SMS'] as $action=>$label): ?>
 <button type="submit" class="lms-ui-button" onclick="document.getElementById('lnp-card-action').value='<?= $e($action) ?>'" <?= $action==='notify_sms' && (!$sms['enabled'] || !$sms['allow_manual_sms'])?'disabled title="Ręczne SMS-y są wyłączone w ustawieniach wtyczki"':'' ?>><span class="lms-ui-label"><?= $e($label) ?></span></button>
 <?php endforeach ?>
-<label><input type="checkbox" name="start_countdown" value="1" <?= (int)$settings['block_after_days']===0?'disabled':'' ?>> Odliczaj do blokady</label>
-<?php if((int)$settings['block_after_days']===0): ?><span>Odliczanie wyłączone w ustawieniach wtyczki.</span><?php endif ?>
 </form></td></tr></tbody></table>

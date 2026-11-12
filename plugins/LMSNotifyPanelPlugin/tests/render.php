@@ -92,15 +92,17 @@ if(preg_match('/name="start_countdown"[^>]*(checked|disabled)/',$enabledHtml))th
 echo "PASS independent manual countdown controls default off and respect zero days.\n";
 
 $preview=null;$bulkPreview=null;$tab='customers';$rows=[$rows[0]];$rows[0]['excluded']=false;$rows[0]['state']='notify';$rows[0]['debt']=200;
-foreach([[true,false,true,'notify_sms_no_mail'],[false,true,false,'notify_manual'],[false,false,false,'none']] as [$noEmail,$mailReady,$smsReady,$wanted]){
+$rows[0]['overdue_debt']=200;
+$smsSettings['enabled']=true;$smsSettings['allow_manual_sms']=true;
+foreach([[true,false,true],[false,true,false],[false,false,false],[false,true,true]] as [$noEmail,$mailReady,$smsReady]){
  $rows[0]['no_email']=$noEmail;$rows[0]['mail_ready']=$mailReady;$rows[0]['sms_ready']=$smsReady;
  ob_start();require __DIR__.'/../views/panel.php';$html=ob_get_clean();
- foreach(['notify_sms_no_mail','notify_manual','notify_history'] as $action){
-  $expected=$wanted==='notify_manual'?in_array($action,['notify_manual','notify_history']):$action===$wanted;
-  if((strpos($html,'name="action" value="'.$action.'"')!==false)!==$expected)throw new RuntimeException('Wrong customer action: '.$action);
- }
+ if(!preg_match('/name="action" value="notify_sms"><button[^>]*>/', $html, $smsButton)
+     || (strpos($smsButton[0],'disabled')===false)!==$smsReady)throw new RuntimeException('Wrong SMS availability');
+ foreach(['notify_manual','notify_history'] as $action)
+  if((strpos($html,'name="action" value="'.$action.'"')!==false)!==$mailReady)throw new RuntimeException('Wrong e-mail availability');
 }
-echo 'PASS SMS without email, email/history only with valid permissions; no email actions without consent'.PHP_EOL;
+echo 'PASS independent SMS and e-mail availability based on recipient consent'.PHP_EOL;
 
 $tab='settings';ob_start();require __DIR__.'/../views/panel.php';$allSettings=ob_get_clean();
 foreach(['Ustawienia wtyczki','Bramka SMSAPI','name="token" value=""','Test połączenia — bez wysyłki SMS','name="sms_body"'] as $needle)if(strpos($allSettings,$needle)===false)throw new RuntimeException('Missing unified setting '.$needle);

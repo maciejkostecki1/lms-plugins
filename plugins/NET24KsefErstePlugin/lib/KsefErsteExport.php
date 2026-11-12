@@ -64,7 +64,7 @@ function kpe_export_line($sender, $invoice, $recipientAddress, $splitPayment = f
         throw new RuntimeException('Waluta inna niż PLN: ' . $invoice['invoice_number']);
     }
     $name = kpe_field(mb_substr(trim($invoice['seller_name']), 0, 80, 'UTF-8'), 80, 'nazwa odbiorcy', '/^[\p{L}0-9 `!@#$%^&*()_+\-=\[\]{};:.,?\/]+$/uD');
-    $address = kpe_field($recipientAddress, 60, 'adres odbiorcy', '/^[\p{L}0-9 .,:;\/\-]+$/uD');
+    $address = kpe_field(trim((string)$recipientAddress) === '' ? '.' : $recipientAddress, 60, 'adres odbiorcy', '/^[\p{L}0-9 .,:;\/\-]+$/uD');
     $title = kpe_field('Faktura ' . $invoice['invoice_number'], 140, 'tytuł przelewu', '/^[\p{L}0-9 `!@#$%^&*()_+\-=\[\]{};:.,?\/]+$/uD');
     $type = '1';
     $nipField = '';
@@ -91,10 +91,45 @@ function kpe_export_line($sender, $invoice, $recipientAddress, $splitPayment = f
 }
 
 
+function kpe_is_paid(array $invoice): bool
+{
+    return (int)($invoice['settled'] ?? 0) === 1
+        || (int)($invoice['ksef_payment_date'] ?? 0) > 0;
+}
+
+function kpe_payment_method(array $invoice): string
+{
+    $types = [
+        0 => 'Inna',
+        1 => 'Gotówka',
+        2 => 'Karta',
+        3 => 'Bon',
+        4 => 'Czek',
+        5 => 'Kredyt',
+        6 => 'Przelew',
+        7 => 'Mobilna',
+    ];
+
+    return $types[(int)($invoice['pay_type'] ?? 0)] ?? 'Nieznana';
+}
+
+function kpe_payment_status(array $invoice): string
+{
+    if ((int)($invoice['settled'] ?? 0) === 1) {
+        return 'Tak — LMS';
+    }
+
+    if ((int)($invoice['ksef_payment_date'] ?? 0) > 0) {
+        return 'Tak — KSeF';
+    }
+
+    return 'Nie';
+}
+
 function kpe_fingerprint(array $invoice, string $sender): string
 {
     $data=[];
-    foreach (['id','division_id','invoice_number','seller_name','gross_amount','vat_amount','currency','seller_ten','issue_date','settled'] as $key) $data[$key]=(string)($invoice[$key]??'');
+    foreach (['id','division_id','invoice_number','seller_name','gross_amount','vat_amount','currency','seller_ten','issue_date','settled','pay_type','ksef_payment_date'] as $key) $data[$key]=(string)($invoice[$key]??'');
     $data['bank_account']=kpe_nrb($invoice['bank_account']) ?: (string)$invoice['bank_account'];
     $data['sender']=$sender;
     return hash('sha256',json_encode($data,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE));

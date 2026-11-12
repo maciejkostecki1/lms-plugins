@@ -1,5 +1,11 @@
 # Zmiany
 
+## 1.1.0 — 12.11.2026
+
+- Trwały rejestr eksportu i kolumna Eksport TXT z datą. Wymagana migracja PostgreSQL.
+- Blokada eksportu opłaconych faktur z LMS i KSeF oraz forma płatności na liście.
+- Zachowany podgląd i jednorazowe potwierdzenie pobrania.
+
 ## 1.0.0 — 29.10.2026
 
 - Obowiązkowy podgląd i jednorazowe zatwierdzenie eksportu, związane z danymi faktur i rachunkiem nadawcy.

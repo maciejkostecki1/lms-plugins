@@ -98,13 +98,17 @@ try {
             $c=$np->inspect((int)($_POST['customerid']??0));
             if (!$c) throw new RuntimeException('Brak aktywnego klienta.');
             $token=bin2hex(random_bytes(24));
-            $_SESSION['lnp_confirm']=array('token'=>$token,'id'=>(int)$c['id'],'action'=>$action,
-                'revision'=>$settings['revision'],'expires'=>time()+600,'start_countdown'=>!empty($_POST['start_countdown']) && (int)$settings['block_after_days']>0);
-            $preview=['customer'=>$c,'action'=>$action,'token'=>$token,'start_countdown'=>$_SESSION['lnp_confirm']['start_countdown']];
+            $canStartCountdown=(int)$settings['block_after_days']>0
+                && in_array($action,['notify','notify_manual','notify_history','notify_sms_no_mail','notify_sms'],true);
+            $_SESSION['lnp_confirm']=['token'=>$token,'id'=>(int)$c['id'],'action'=>$action,
+                'revision'=>$settings['revision'],'expires'=>time()+600,'can_start_countdown'=>$canStartCountdown];
+            $preview=['customer'=>$c,'action'=>$action,'token'=>$token,'can_start_countdown'=>$canStartCountdown];
             if($action==='block')$preview['block_notice']=$np->blockNoticeStatus($c,$settings);
             if(in_array($action,['notify','notify_manual','notify_history','notify_sms_no_mail','notify_sms'],true)){
-                if(!NotifyPolicy::notificationDue($c,$settings))throw new RuntimeException('Zadłużenie po terminie jest poniżej progu powiadomienia '.$settings['notify_percent'].'%. Próg obowiązuje także ręczne SMS-y i e-maile.');
-                $messageSettings=$settings;$messageSettings['channels']=in_array($action,['notify_sms_no_mail','notify_sms'],true)?['sms']:['mail'];
+                $isManualSms=in_array($action,['notify_sms','notify_sms_no_mail'],true);
+                if(!($isManualSms?NotifyPolicy::thresholdDue($c,0):NotifyPolicy::notificationDue($c,$settings)))throw new RuntimeException('Brak zadłużenia po terminie lub nieosiągnięty próg powiadomienia.');
+
+                $messageSettings=$settings;$messageSettings['channels']=$isManualSms?['sms']:['mail'];if($isManualSms)$messageSettings['notify_percent']=0;
                 if($action==='notify_sms_no_mail' && $np->hasEmailContact((int)$c['id']))throw new RuntimeException('Klient ma wpisany adres e-mail.');
                 if(in_array($action,['notify_sms_no_mail','notify_sms'],true) && (!$smsSettings['enabled'] || !$smsSettings['allow_manual_sms']))throw new RuntimeException('Ręczna wysyłka SMS jest wyłączona.');
                 if(!$np->notificationTargets($c,$messageSettings))throw new RuntimeException('Brak właściwego kontaktu, zgody lub wymagany odstęp od ostatniej wysyłki.');
@@ -127,7 +131,7 @@ try {
             $draft=$_SESSION['lnp_confirm']??null;
             unset($_SESSION['lnp_confirm']);
             if (!$draft || !is_string($_POST['token']??null) || !hash_equals($draft['token'],$_POST['token']) || $draft['expires']<time()) throw new RuntimeException('Podgląd wygasł lub został już wykorzystany.');
-            $notice=$np->act($draft['id'],$draft['action'],$draft['revision'],$draft['history_hash']??null,false,!empty($draft['start_countdown']));
+            $notice=$np->act($draft['id'],$draft['action'],$draft['revision'],$draft['history_hash']??null,false,(!empty($draft['can_start_countdown']) && ($_POST['start_countdown']??null)==='1'));
         } else throw new RuntimeException('Nieznana operacja.');
         if(!in_array($op,['preview','bulk_preview','bulk_history_preview','bulk_sms_preview'],true)) {
             unset($_SESSION['lnp_list']);

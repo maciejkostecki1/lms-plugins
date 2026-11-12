@@ -1,8 +1,36 @@
 {extends file="layout.html"}
 {block name="module_content"}
+
+<style>
+.kpe-table-wrap {
+    width: 100%;
+    overflow: visible;
+}
+
+.kpe-table {
+    width: 100%;
+    table-layout: auto;
+}
+
+.kpe-table th,
+.kpe-table td {
+    overflow-wrap: anywhere;
+    word-break: normal;
+    vertical-align: middle;
+}
+
+.kpe-table input[type="text"] {
+    width: 100%;
+    min-width: 90px;
+    max-width: 260px;
+    box-sizing: border-box;
+}
+</style>
 <h2>Przelewy KSeF → ERSTE — eksport TXT</h2>
 <p><strong>Eksport nie oznacza zapłaty.</strong> Plik wymaga osobnego importu i zatwierdzenia w banku. Eksport obejmuje pełne brutto dokumentu i nie zmienia rozliczeń LMS.</p>
 {if $ksef_payment_error}<div class="alert alert-danger" role="alert">{$ksef_payment_error|escape}</div>{/if}
+
+{if !$ksef_payment_status_ready}<p role="alert">Zainstaluj migrację rejestru eksportu zgodnie z README.</p>{/if}
 {if $ksef_payment_preview}
 <section class="lms-ui-box-container">
 <h3>Podgląd eksportu — sprawdź odbiorców i rachunki</h3>
@@ -11,11 +39,11 @@
 <div style="overflow:auto"><table class="lmsbox"><thead><tr><th>Faktura / odbiorca</th><th>Rachunek odbiorcy</th><th>Adres</th><th>Kwota brutto</th><th>MPP</th><th>Ostrzeżenia</th></tr></thead><tbody>
 {foreach $ksef_payment_preview.items as $invoice}<tr>
 <td>{$invoice.invoice_number|escape}<br>{$invoice.seller_name|escape}</td><td>{$invoice.export_account|escape}</td><td>{$invoice.export_address|escape}</td><td>{$invoice.gross_amount|escape} PLN</td><td>{if $invoice.mpp}Tak — VAT {$invoice.vat_amount|escape} PLN{else}Nie{/if}</td>
-<td>{if $invoice.settled}<strong>Faktura rozliczona.</strong>{/if} {if $invoice.previous_export}<strong>Plik już pobierano w tej sesji.</strong>{/if}</td></tr>{/foreach}
+<td>{if $invoice.settled}<strong>Faktura rozliczona.</strong>{/if} {if $invoice.previous_export}<strong>Faktura była już eksportowana.</strong>{/if}</td></tr>{/foreach}
 </tbody></table></div>
 <form method="post" action="?m=ksefpaymentexport">
 <input type="hidden" name="action" value="export"><input type="hidden" name="division" value="{$ksef_payment_division_id|escape}"><input type="hidden" name="date_from" value="{$ksef_payment_date_from|escape}"><input type="hidden" name="date_to" value="{$ksef_payment_date_to|escape}"><input type="hidden" name="csrf_token" value="{$ksef_payment_csrf|escape}"><input type="hidden" name="draft_token" value="{$ksef_payment_preview.token|escape}">
-{if $ksef_payment_preview.warnings}<p role="alert"><strong>Ryzyko ponownej płatności.</strong> Wybrano fakturę rozliczoną lub wcześniej eksportowaną w tej sesji. Sprawdź historię w banku.</p><label><input type="checkbox" name="allow_repeat" value="1" required> Świadomie potwierdzam ponowny eksport tych dokumentów.</label>{/if}
+{if $ksef_payment_preview.warnings}<p role="alert"><strong>Ryzyko ponownej płatności.</strong> Wybrano wcześniej eksportowaną fakturę. Sprawdź historię w banku.</p><label><input type="checkbox" name="allow_repeat" value="1" required> Świadomie potwierdzam ponowny eksport tych dokumentów.</label>{/if}
 <button class="lms-ui-button" type="submit">Potwierdź dane i pobierz TXT ERSTE</button> <a href="?m=ksefpaymentexport&amp;division={$ksef_payment_division_id|escape}&amp;date_from={$ksef_payment_date_from|escape}&amp;date_to={$ksef_payment_date_to|escape}">Wróć do listy</a>
 </form></section>
 {/if}
@@ -24,20 +52,99 @@
 <label>Podmiot: <select name="division">{foreach $ksef_payment_divisions as $division}<option value="{$division.id|escape}" {if $division.id == $ksef_payment_division_id}selected{/if}>{$division.name|escape}</option>{/foreach}</select></label>
 <span class="lms-ui-date-period-container">{date_period_preset from="#ksef-date-from" to="#ksef-date-to"}<span>Data od:</span><input type="text" class="lms-ui-date" id="ksef-date-from" name="date_from" size="10" maxlength="10" value="{$ksef_payment_date_from|replace:'-':'/'|escape}" placeholder="rrrr/mm/dd"><span>Data do:</span><input type="text" class="lms-ui-date" id="ksef-date-to" name="date_to" size="10" maxlength="10" value="{$ksef_payment_date_to|replace:'-':'/'|escape}" placeholder="rrrr/mm/dd"></span>
 <button class="lms-ui-button" type="submit">Pokaż faktury</button></form>
+<p>Wyświetlane faktury z wybranego okresu: Pominięto z powodu niepoprawnych danych w przeskanowanym zakresie: {$ksef_payment_skipped|escape}.</p>
+
 <p>Strona {$ksef_payment_page|escape}, do 200 poprawnych dokumentów. Pominięto z powodu niepoprawnych danych w przeskanowanym zakresie: {$ksef_payment_skipped|escape}.</p>
 <p>{if $ksef_payment_page>1}<a href="?m=ksefpaymentexport&amp;division={$ksef_payment_division_id|escape}&amp;date_from={$ksef_payment_date_from|escape}&amp;date_to={$ksef_payment_date_to|escape}&amp;page={$ksef_payment_page-1}">Poprzednia strona</a>{/if} {if $ksef_payment_has_next}<a href="?m=ksefpaymentexport&amp;division={$ksef_payment_division_id|escape}&amp;date_from={$ksef_payment_date_from|escape}&amp;date_to={$ksef_payment_date_to|escape}&amp;page={$ksef_payment_page+1}">Następna strona</a>{/if}</p>
 <form method="post" action="?m=ksefpaymentexport" id="kpe-selection">
 <input type="hidden" name="action" value="preview"><input type="hidden" name="division" value="{$ksef_payment_division_id|escape}"><input type="hidden" name="date_from" value="{$ksef_payment_date_from|escape}"><input type="hidden" name="date_to" value="{$ksef_payment_date_to|escape}"><input type="hidden" name="page" value="{$ksef_payment_page|escape}"><input type="hidden" name="csrf_token" value="{$ksef_payment_csrf|escape}"><input type="hidden" name="view_token" value="{$ksef_payment_view_token|escape}">
-<div style="overflow:auto"><table class="lmsbox"><thead><tr><th><label><input type="checkbox" id="ksef_all"> Wszystkie nierozliczone</label></th><th>Faktura</th><th>Sprzedawca</th><th>Brutto</th><th>VAT</th><th>MPP</th><th>Rachunek</th><th>Adres odbiorcy — wymagany dla wybranych</th><th>Rozliczona</th></tr></thead><tbody>
-{foreach $ksef_payment_invoices as $invoice}<tr>
-<td><input type="checkbox" class="ksef_invoice" name="invoice_ids[]" value="{$invoice.id|escape}" data-settled="{if $invoice.settled}1{else}0{/if}" {if in_array($invoice.id,$ksef_payment_selected)}checked{/if}></td><td>{$invoice.invoice_number|escape}</td><td>{$invoice.seller_name|escape}</td><td>{$invoice.gross_amount|escape} {$invoice.currency|escape}</td><td>{$invoice.vat_amount|escape} PLN</td><td><input type="checkbox" name="mpp_ids[]" value="{$invoice.id|escape}" {if in_array($invoice.id,$ksef_payment_mpp)}checked{/if}></td><td>{$invoice.normalized_account|escape}</td><td><input type="text" name="recipient_address[{$invoice.id|escape}]" maxlength="60" size="35" value="{$ksef_payment_addresses[$invoice.id]|default:''|escape}" placeholder="Ulica, numer, kod, miasto"></td><td>{if $invoice.settled}<strong>Tak — wymaga potwierdzenia</strong>{else}Nie{/if}</td></tr>
-{foreachelse}<tr><td colspan="9">Brak poprawnych faktur na tej stronie.</td></tr>{/foreach}
+<div class="kpe-table-wrap"><table class="lmsbox kpe-table"><thead><tr><th><input type="checkbox" id="ksef_all" aria-label="Zaznacz faktury bez zapisanego eksportu"></th><th>Faktura</th><th>Data wystawienia</th><th>Sprzedawca</th><th>Brutto</th><th>VAT</th><th>
+<label title="Zaznacz MPP dla wszystkich wybranych faktur">
+<input type="checkbox" id="ksef_mpp_all"> MPP
+</label>
+</th><th>Rachunek</th><th>Adres odbiorcy</th><th>Forma płatności</th><th>Zapłacona</th><th>Eksport TXT</th></tr></thead><tbody>
+{foreach $ksef_payment_invoices as $invoice}<tr{if $invoice.kpe_paid} style="background:#eeeeee;color:#777;"{/if}>
+<td><input type="checkbox" class="ksef_invoice" name="invoice_ids[]" value="{$invoice.id|escape}" data-exported="{if $invoice.kpe_exported_at}1{else}0{/if}" data-paid="{if $invoice.kpe_paid}1{else}0{/if}" {if $invoice.kpe_paid}disabled title="Faktura zapłacona"{elseif in_array($invoice.id,$ksef_payment_selected)}checked{/if}></td><td>{$invoice.invoice_number|escape}</td><td>{$invoice.issue_date|date_format:"%Y-%m-%d"|escape}</td><td>{$invoice.seller_name|escape}</td><td>{$invoice.gross_amount|string_format:"%.2f"|replace:".":","|escape} {$invoice.currency|escape}</td><td>{$invoice.vat_amount|string_format:"%.2f"|replace:".":","|escape} PLN</td><td><input type="checkbox" name="mpp_ids[]" value="{$invoice.id|escape}" {if $invoice.kpe_paid}disabled{elseif in_array($invoice.id,$ksef_payment_mpp)}checked{/if}></td><td>{$invoice.normalized_account|escape}</td><td><input type="text" name="recipient_address[{$invoice.id|escape}]" maxlength="60" size="35" value="{$ksef_payment_addresses[$invoice.id]|default:''|escape}" placeholder="Ulica, numer, kod, miasto"></td><td>{$invoice.kpe_payment_method|escape}</td><td>{if $invoice.kpe_paid}<strong>{$invoice.kpe_payment_status|escape}</strong>{else}Nie{/if}</td><td>{if $invoice.kpe_exported_at}<strong>Wyeksportowana</strong><br><small>{$invoice.kpe_exported_at|escape}</small>{else}Brak zapisu{/if}</td></tr>
+{foreachelse}<tr><td colspan="12">Brak poprawnych faktur na tej stronie.</td></tr>{/foreach}
 </tbody></table></div>
-<p>Adresy nie są zapisywane w bazie. Dokument rozliczony możesz wybrać osobno; przed pobraniem będzie wymagane dodatkowe potwierdzenie.</p>
-<button class="lms-ui-button" type="submit">Przygotuj podgląd zaznaczonych przelewów</button></form>
+<p>Brak adresu odbiorcy zostanie zapisany w TXT jako kropka. Eksport nie zmienia rozliczeń. Status oznacza udostępnienie pliku TXT przez LMS, niezależnie od zapłaty. Starsze eksporty bez zapisu mogą nie być oznaczone.</p>
+<button class="lms-ui-button" type="submit"{if !$ksef_payment_status_ready} disabled{/if}>Przygotuj podgląd zaznaczonych przelewów</button></form>
 {literal}<script>
-(()=>{const form=document.getElementById('kpe-selection');if(!form)return;const boxes=[...form.querySelectorAll('.ksef_invoice')];
-const sync=()=>boxes.forEach(c=>{const row=c.closest('tr');row.querySelector('input[type="text"]').required=c.checked;const mpp=row.querySelector('[name="mpp_ids[]"]');if(!c.checked)mpp.checked=false;});
-document.getElementById('ksef_all').addEventListener('change',e=>{boxes.filter(c=>c.dataset.settled!=='1').forEach(c=>c.checked=e.target.checked);sync();});boxes.forEach(c=>c.addEventListener('change',sync));sync();})();
+(() => {
+    const form = document.getElementById('kpe-selection');
+    if (!form) return;
+
+    const boxes = [...form.querySelectorAll('.ksef_invoice')];
+    const all = document.getElementById('ksef_all');
+    const mppAll = document.getElementById('ksef_mpp_all');
+
+    function isBulkEligible(c) {
+        return !c.disabled && c.dataset.paid !== '1' && c.dataset.settled !== '1' && c.dataset.exported !== '1';
+    }
+
+    function sync() {
+        boxes.forEach(c => {
+            const mpp = c.closest('tr').querySelector('[name="mpp_ids[]"]');
+            if (!mpp) return;
+
+            if (!c.checked || c.disabled) {
+                mpp.checked = false;
+            }
+
+            mpp.disabled = !c.checked || c.disabled;
+        });
+
+        const selected = boxes.filter(c => c.checked && !c.disabled);
+
+        const selectedMpp = selected.filter(c => {
+            const mpp = c.closest('tr').querySelector('[name="mpp_ids[]"]');
+            return mpp && mpp.checked;
+        });
+
+        mppAll.checked = selected.length > 0 &&
+                         selectedMpp.length === selected.length;
+
+        mppAll.indeterminate = selectedMpp.length > 0 &&
+                               selectedMpp.length < selected.length;
+
+        mppAll.disabled = selected.length === 0;
+
+        const available = boxes.filter(isBulkEligible);
+        const checked = available.filter(c => c.checked);
+
+        all.checked = available.length > 0 &&
+                      checked.length === available.length;
+
+        all.indeterminate = checked.length > 0 &&
+                            checked.length < available.length;
+    }
+
+    all.addEventListener('change', e => {
+        boxes.forEach(c => {
+            if (isBulkEligible(c)) {
+                c.checked = e.target.checked;
+            }
+        });
+        sync();
+    });
+
+    mppAll.addEventListener('change', e => {
+        boxes.forEach(c => {
+            if (!c.checked || c.disabled) return;
+
+            const mpp = c.closest('tr').querySelector('[name="mpp_ids[]"]');
+            if (mpp) mpp.checked = e.target.checked;
+        });
+        sync();
+    });
+
+    boxes.forEach(c => c.addEventListener('change', sync));
+
+    form.querySelectorAll('[name="mpp_ids[]"]').forEach(mpp => {
+        mpp.addEventListener('change', sync);
+    });
+
+    sync();
+})();
 </script>{/literal}
 {/block}

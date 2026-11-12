@@ -81,18 +81,21 @@ final class NotifyPolicy
         $base=(int)round((float)$c['base']*100);$debt=(int)round((float)($c['overdue_debt']??$c['debt'])*100);
         return $base>0 && $debt*100 >= $base*(int)$s['suspend_percent'];
     }
-    public static function render(string $text, array $c): string
+    public static function render(string $text, array $c, int $paymentDays=0): string
     {
         self::manualTokens($text);
         if(strpos($text,'%bankaccount')!==false && empty($c['bankaccount']))throw new RuntimeException('Brak numeru rachunku w podglądzie wiadomości.');
-        return strtr($text, ['%cid'=>(string)$c['id'], '%customername'=>$c['customername'],
+        $paymentRequest=$paymentDays>0
+            ? 'Prosimy o wpłatę w ciągu '.$paymentDays.' dni od tej wiadomości.'
+            : 'Prosimy o wpłatę.';
+        return strtr($text, ['%payment_request'=>$paymentRequest, '%cid'=>(string)$c['id'], '%customername'=>$c['customername'],
             '%name'=>$c['customername'],'%bankaccount'=>$c['bankaccount']??'',
             '%balance'=>number_format($c['balance'],2,',',' '), '%debt'=>number_format($c['debt'],2,',',' '),
             '%monthly'=>number_format($c['base'],2,',',' '), '%percent'=>(string)$c['percent']]);
     }
     public static function manualTokens(string $text): void
     {
-        $remaining=str_replace(['%cid','%customername','%name','%bankaccount','%balance','%debt','%monthly','%percent'],'',$text);
+        $remaining=str_replace(['%cid','%customername','%name','%bankaccount','%balance','%debt','%monthly','%percent','%payment_request'],'',$text);
         if(preg_match('/%[a-zA-Z_]/',$remaining))throw new RuntimeException('Nieznany symbol szablonu ręcznego. Dług abonamentowy: %debt; saldo konta: %balance. Symbol %unpaid jest dostępny w powiadomieniach o fakturach.');
     }
 }
